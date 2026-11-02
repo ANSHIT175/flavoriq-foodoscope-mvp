@@ -1,14 +1,19 @@
 import {
+  CuisineOption,
+  DietaryOption,
   FlavorCompatibilityResult,
   NormalizedRecipe,
+  TasteOption,
   UserCookingContext,
 } from "../foodoscope/types";
-import { normalizeIngredientName } from "../foodoscope/normalizers";
+import {
+  getIngredientCategory,
+  isIngredientMatch,
+  normalizeIngredientName,
+} from "../foodoscope/normalizers";
 import { getFlavorCompatibility } from "../foodoscope/flavorDb";
+import { SMART_SUBSTITUTIONS_CATALOG } from "../foodoscope/mockCatalog";
 
-/**
- * Configurable MVP Recommendation Weights (Total = 100 points)
- */
 export const SCORING_WEIGHTS = {
   ingredientCoverage: 30,
   flavorCompatibility: 25,
@@ -38,7 +43,7 @@ export interface IngredientMatchSummary {
   userIngredientsTotalCount: number;
   recipeCoreMatchedCount: number;
   recipeCoreTotalCount: number;
-  fitDisplay: string; // e.g., "4/4"
+  fitDisplay: string;
 }
 
 export interface RankedRecipeResult {
@@ -93,6 +98,134 @@ export function matchesProteinLevel(
   return true;
 }
 
+/**
+ * Generates custom, flavor-matched recipes on the fly whenever the user enters custom pantry
+ * ingredients (e.g. "Maggie", "Broccoli", "Oats", "Corn", "Cheese", etc.) so they ALWAYS get
+ * recipes centered around their exact active pantry rather than unrelated default dishes.
+ */
+function buildDynamicPantryRecipes(
+  context: UserCookingContext
+): NormalizedRecipe[] {
+  const rawIngs = context.ingredients.map((i) => i.trim()).filter(Boolean);
+  if (rawIngs.length === 0) return [];
+
+  const primaryRaw = rawIngs[0];
+  const primaryCanon = normalizeIngredientName(primaryRaw);
+  const displayPrimary =
+    primaryRaw.charAt(0).toUpperCase() + primaryRaw.slice(1);
+
+  const chosenCuisine: Exclude<CuisineOption, "Any"> =
+    context.cuisine === "Any" ? "Indian" : context.cuisine;
+  const chosenTaste: Exclude<TasteOption, "Any"> =
+    context.taste === "Any" ? "Spicy" : context.taste;
+  const chosenDiet: Exclude<DietaryOption, "No preference"> =
+    context.dietaryPreference === "No preference"
+      ? "Vegetarian"
+      : context.dietaryPreference;
+
+  const coreList = rawIngs.slice(0, 4).map((ing) => ({
+    name: ing.charAt(0).toUpperCase() + ing.slice(1),
+    canonicalName: normalizeIngredientName(ing),
+    quantity: "1 cup / as needed",
+    category: getIngredientCategory(ing),
+    isCore: true,
+  }));
+
+  return [
+    {
+      id: `fiq-dyn-${primaryCanon}-1`,
+      recipeDbId: `RDB-DYN-${primaryCanon.toUpperCase().slice(0, 4)}-01`,
+      name: `Masala ${displayPrimary} & Roasted Garlic Skillet`,
+      cuisine: chosenCuisine,
+      region: `${chosenCuisine} Home Style`,
+      tasteProfile: [chosenTaste, "Savory"],
+      cookingTimeMinutes: 15,
+      dietaryTags: [chosenDiet, "Low-oil"],
+      processes: ["saute", "simmer", "tadka"],
+      utensils: ["skillet", "spatula"],
+      nutrition: {
+        calories: 310,
+        proteinG: 14,
+        carbsG: 42,
+        fatG: 9,
+        fiberG: 6,
+      },
+      ingredients: [
+        ...coreList,
+        {
+          name: "Garlic",
+          canonicalName: "garlic",
+          quantity: "3 cloves minced",
+          category: "Spices",
+          isCore: false,
+        },
+        {
+          name: "Cumin",
+          canonicalName: "cumin",
+          quantity: "1 tsp roasted",
+          category: "Spices",
+          isCore: false,
+        },
+      ],
+      instructions: [
+        `Prep ${rawIngs.join(", ")} into bite-sized pieces.`,
+        `Heat 1 tbsp oil in a skillet and temper garlic and cumin until aromatic.`,
+        `Toss in ${displayPrimary} and cook over medium-high flame for 8–10 minutes until tender and well-coated in masala.`,
+        `Garnish with fresh herbs and serve hot.`,
+      ],
+      image:
+        "https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?auto=format&fit=crop&w=800&q=80",
+      sourceUrl: "/recipes",
+      adaptations: SMART_SUBSTITUTIONS_CATALOG.paneer,
+    },
+    {
+      id: `fiq-dyn-${primaryCanon}-2`,
+      recipeDbId: `RDB-DYN-${primaryCanon.toUpperCase().slice(0, 4)}-02`,
+      name: `Wok-Tossed Chilli Garlic ${displayPrimary} Bowl`,
+      cuisine: context.cuisine === "Any" ? "Chinese" : chosenCuisine,
+      region: "High-Heat Wok",
+      tasteProfile: ["Spicy", "Tangy", "Savory"],
+      cookingTimeMinutes: 14,
+      dietaryTags: ["Vegetarian", "Vegan", "Dairy-free"],
+      processes: ["sear", "stir-fry"],
+      utensils: ["wok", "tongs"],
+      nutrition: {
+        calories: 295,
+        proteinG: 15,
+        carbsG: 38,
+        fatG: 8,
+        fiberG: 5,
+      },
+      ingredients: [
+        ...coreList,
+        {
+          name: "Ginger",
+          canonicalName: "ginger",
+          quantity: "1 tsp minced",
+          category: "Spices",
+          isCore: false,
+        },
+        {
+          name: "Capsicum",
+          canonicalName: "capsicum",
+          quantity: "1/2 cup sliced",
+          category: "Vegetables",
+          isCore: false,
+        },
+      ],
+      instructions: [
+        `Flash-sear ${displayPrimary} in a hot wok for 3 minutes.`,
+        `Add ginger, garlic, and crisp vegetables, tossing over high heat.`,
+        `Glaze with tangy soy-chilli reduction and serve immediately.`,
+      ],
+      image:
+        "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=800&q=80",
+      sourceUrl: "/recipes",
+      adaptations: SMART_SUBSTITUTIONS_CATALOG.tofu,
+    },
+  ];
+}
+
 export async function scoreAndRankRecipes(
   candidates: NormalizedRecipe[],
   context: UserCookingContext
@@ -101,28 +234,50 @@ export async function scoreAndRankRecipes(
     new Set(context.ingredients.map(normalizeIngredientName).filter(Boolean))
   );
 
+  // Check how many catalog recipes match at least one user core ingredient
+  const matchingCatalogCount = candidates.filter((rec) =>
+    rec.ingredients.some((rIng) =>
+      context.ingredients.some((uRaw) => isIngredientMatch(uRaw, rIng))
+    )
+  ).length;
+
+  const fullCandidatePool =
+    matchingCatalogCount < 2 && userCanonical.length > 0
+      ? [...candidates, ...buildDynamicPantryRecipes(context)]
+      : candidates;
+
   const results: RankedRecipeResult[] = [];
 
-  for (const recipe of candidates) {
+  for (const recipe of fullCandidatePool) {
     const coreIngredients = recipe.ingredients.filter((i) => i.isCore);
     const secondaryIngredients = recipe.ingredients.filter((i) => !i.isCore);
 
     const matchedCore = coreIngredients
-      .filter((i) => userCanonical.includes(i.canonicalName))
+      .filter((i) =>
+        context.ingredients.some((u) => isIngredientMatch(u, i))
+      )
       .map((i) => i.name);
     const missingCore = coreIngredients
-      .filter((i) => !userCanonical.includes(i.canonicalName))
+      .filter(
+        (i) => !context.ingredients.some((u) => isIngredientMatch(u, i))
+      )
       .map((i) => i.name);
 
     const matchedSecondary = secondaryIngredients
-      .filter((i) => userCanonical.includes(i.canonicalName))
+      .filter((i) =>
+        context.ingredients.some((u) => isIngredientMatch(u, i))
+      )
       .map((i) => i.name);
     const missingSecondary = secondaryIngredients
-      .filter((i) => !userCanonical.includes(i.canonicalName))
+      .filter(
+        (i) => !context.ingredients.some((u) => isIngredientMatch(u, i))
+      )
       .map((i) => i.name);
 
-    const recipeCanonicalAll = recipe.ingredients.map((i) => i.canonicalName);
-    const userUsedCount = userCanonical.filter((u) => recipeCanonicalAll.includes(u)).length;
+    const totalMatchedInRecipe = matchedCore.length + matchedSecondary.length;
+    const userUsedCount = context.ingredients.filter((u) =>
+      recipe.ingredients.some((rIng) => isIngredientMatch(u, rIng))
+    ).length;
 
     // 1. Ingredient Coverage (0 - 30)
     const coreRatio =
@@ -134,24 +289,27 @@ export async function scoreAndRankRecipes(
     const userUtilizationRatio =
       userCanonical.length > 0 ? userUsedCount / userCanonical.length : 0;
     const rawIngScore =
-      (coreRatio * 0.7 + secondaryRatio * 0.1 + userUtilizationRatio * 0.2) *
+      (coreRatio * 0.55 + secondaryRatio * 0.05 + userUtilizationRatio * 0.4) *
       SCORING_WEIGHTS.ingredientCoverage;
     const ingredientCoverage: number = Math.round(rawIngScore);
 
     // 2. Flavor Compatibility (0 - 25) via FlavorDB
-    // Combine user's matched ingredients with recipe's core ingredients so pantry edits change FlavorDB score
+    // Only award full FlavorDB score when the recipe actually uses user pantry ingredients!
     const activeRecipeIngredients = Array.from(
       new Set([
         ...matchedCore.map(normalizeIngredientName),
         ...matchedSecondary.map(normalizeIngredientName),
-        ...coreIngredients.slice(0, 2).map((i) => i.canonicalName),
+        ...(matchedCore.length > 0
+          ? coreIngredients.slice(0, 2).map((i) => i.canonicalName)
+          : []),
       ])
     );
     const flavorResult = await getFlavorCompatibility(
       activeRecipeIngredients,
       SCORING_WEIGHTS.flavorCompatibility
     );
-    const flavorCompatibility: number = flavorResult.score;
+    const flavorCompatibility: number =
+      totalMatchedInRecipe === 0 ? 4 : flavorResult.score;
 
     // 3. Cuisine Fit (0 - 15)
     let cuisineFit: number = 0;
@@ -192,18 +350,19 @@ export async function scoreAndRankRecipes(
       }
     }
 
-    const totalScore: number = Math.min(
-      100,
-      Math.max(
-        0,
-        ingredientCoverage +
-          flavorCompatibility +
-          cuisineFit +
-          tasteFit +
-          timeFit +
-          dietaryFit
-      )
-    );
+    const rawTotal =
+      ingredientCoverage +
+      flavorCompatibility +
+      cuisineFit +
+      tasteFit +
+      timeFit +
+      dietaryFit;
+
+    // Cap score if 0 core ingredients matched so zero-match recipes never look like high matches
+    const totalScore: number =
+      matchedCore.length === 0
+        ? Math.min(35, rawTotal)
+        : Math.min(100, Math.max(0, rawTotal));
 
     results.push({
       recipe,
@@ -258,7 +417,17 @@ export async function scoreAndRankRecipes(
 
   const maxMinutes = parseMaxTimeMinutes(context.maxCookingTime);
 
-  const strictFiltered = results.filter((r) => {
+  // Filter to recipes that match at least 1 pantry ingredient!
+  const pantryMatchedResults = results.filter(
+    (r) =>
+      r.ingredientMatch.matchedCoreIngredients.length > 0 ||
+      r.ingredientMatch.matchedSecondaryIngredients.length > 0
+  );
+
+  const activePool =
+    pantryMatchedResults.length > 0 ? pantryMatchedResults : results;
+
+  const strictFiltered = activePool.filter((r) => {
     if (
       context.dietaryPreference !== "No preference" &&
       !r.recipe.dietaryTags.includes(context.dietaryPreference)
@@ -271,30 +440,32 @@ export async function scoreAndRankRecipes(
     if (!matchesProteinLevel(r.recipe.nutrition.proteinG, context.proteinLevel)) {
       return false;
     }
-    if (
-      !context.allowAdditionalIngredients &&
-      r.ingredientMatch.matchedCoreIngredients.length === 0
-    ) {
-      return false;
-    }
     return true;
   });
 
+  const finalPool = strictFiltered.length > 0 ? strictFiltered : activePool;
+
   // Sort by:
-  // 1) If a specific cuisine is selected, prioritize recipes of that cuisine
-  // 2) If a max cooking time is selected, prioritize recipes within that time limit
-  // 3) Total 100-point score descending
-  const sortFn = (a: RankedRecipeResult, b: RankedRecipeResult) => {
+  // 1) Recipes that match core pantry ingredients ALWAYS come before 0-core-match recipes
+  // 2) Total 100-point score descending
+  // 3) Number of matched core ingredients descending
+  return finalPool.sort((a, b) => {
+    const aHasCore = a.ingredientMatch.recipeCoreMatchedCount > 0 ? 1 : 0;
+    const bHasCore = b.ingredientMatch.recipeCoreMatchedCount > 0 ? 1 : 0;
+    if (aHasCore !== bHasCore) return bHasCore - aHasCore;
+
     if (context.cuisine !== "Any") {
-      const aCuisineMatch = a.recipe.cuisine === context.cuisine ? 1 : 0;
-      const bCuisineMatch = b.recipe.cuisine === context.cuisine ? 1 : 0;
-      if (aCuisineMatch !== bCuisineMatch) return bCuisineMatch - aCuisineMatch;
+      const aCuisine = a.recipe.cuisine === context.cuisine ? 1 : 0;
+      const bCuisine = b.recipe.cuisine === context.cuisine ? 1 : 0;
+      if (aCuisine !== bCuisine) return bCuisine - aCuisine;
     }
+
     if (maxMinutes !== null) {
       const aTimeOk = a.recipe.cookingTimeMinutes <= maxMinutes ? 1 : 0;
       const bTimeOk = b.recipe.cookingTimeMinutes <= maxMinutes ? 1 : 0;
       if (aTimeOk !== bTimeOk) return bTimeOk - aTimeOk;
     }
+
     if (b.scoreBreakdown.totalScore !== a.scoreBreakdown.totalScore) {
       return b.scoreBreakdown.totalScore - a.scoreBreakdown.totalScore;
     }
@@ -302,7 +473,5 @@ export async function scoreAndRankRecipes(
       b.ingredientMatch.recipeCoreMatchedCount -
       a.ingredientMatch.recipeCoreMatchedCount
     );
-  };
-
-  return strictFiltered.sort(sortFn);
+  });
 }

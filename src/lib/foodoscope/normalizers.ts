@@ -19,7 +19,7 @@ export const INGREDIENT_SYNONYM_GROUPS: Record<string, string[]> = {
   onion: ["onion", "onions", "pyaaz", "pyaz", "red onion", "white onion", "shallots", "spring onion", "scallions"],
   capsicum: ["capsicum", "bell pepper", "bell peppers", "shimla mirch", "green pepper", "red bell pepper", "peppers"],
   potato: ["potato", "potatoes", "aloo", "alu", "baby potatoes", "boiled potato"],
-  rice: ["rice", "chawal", "basmati rice", "basmati", "cooked rice", "white rice", "brown rice", "jasmine rice", "sushi rice"],
+  rice: ["rice", "chawal", "basmati rice", "basmati", "cooked rice", "white rice", "brown rice", "jasmine rice", "sushi rice", "poha"],
   spinach: ["spinach", "palak", "baby spinach", "saag", "leafy greens"],
   garlic: ["garlic", "lahsun", "lehsun", "garlic cloves", "minced garlic"],
   ginger: ["ginger", "adrak", "fresh ginger", "ginger juliennes", "galangal"],
@@ -27,10 +27,15 @@ export const INGREDIENT_SYNONYM_GROUPS: Record<string, string[]> = {
   coriander: ["coriander", "cilantro", "dhania", "coriander leaves", "coriander seeds"],
   cumin: ["cumin", "jeera", "cumin seeds", "roasted cumin", "ground cumin"],
   pasta: ["pasta", "penne", "spaghetti", "macaroni", "fusilli", "fettuccine"],
-  noodles: ["noodles", "ramen", "udon", "rice noodles", "hakka noodles", "soba"],
+  maggi: ["maggi", "maggie", "instant noodles", "masala noodles", "wai wai", "yippee", "cup noodles"],
+  noodles: ["noodles", "ramen", "udon", "rice noodles", "hakka noodles", "soba", "chowmein", "chow mein"],
+  bread: ["bread", "pizza", "pazzia", "pizza base", "pav", "bun", "toast", "roti", "chapati", "naan", "tortilla"],
+  cheese: ["cheese", "mozzarella", "cheddar", "processed cheese", "amul cheese", "parmesan"],
+  peas: ["peas", "green peas", "matar", "mattar", "mutter", "frozen peas"],
+  corn: ["corn", "sweet corn", "bhutta", "makai", "baby corn"],
   chickpeas: ["chickpeas", "chickpea", "chana", "chole", "kabuli chana", "garbanzo", "garbanzo beans"],
   mushroom: ["mushroom", "mushrooms", "button mushroom", "cremini", "shiitake", "portobello"],
-  tofu: ["tofu", "bean curd", "firm tofu", "silken tofu", "soya paneer"],
+  tofu: ["tofu", "bean curd", "firm tofu", "silken tofu", "soya paneer", "soya", "soya chunks"],
   "black beans": ["black beans", "beans", "kidney beans", "rajma", "pinto beans"],
   "coconut milk": ["coconut milk", "coconut cream", "nariyal doodh"],
   lemon: ["lemon", "lime", "nimbu", "lemon juice", "lime juice", "citrus"],
@@ -38,7 +43,7 @@ export const INGREDIENT_SYNONYM_GROUPS: Record<string, string[]> = {
   avocado: ["avocado", "guacamole"],
   "olive oil": ["olive oil", "extra virgin olive oil"],
   "soy sauce": ["soy sauce", "tamari", "shoyu"],
-  "sesame": ["sesame", "sesame oil", "sesame seeds", "tahini", "til"],
+  sesame: ["sesame", "sesame oil", "sesame seeds", "tahini", "til"],
   edamame: ["edamame", "green soybeans", "soybeans"],
   eggplant: ["eggplant", "baingan", "aubergine", "brinjal"],
   yogurt: ["yogurt", "curd", "dahi", "greek yogurt"],
@@ -46,24 +51,29 @@ export const INGREDIENT_SYNONYM_GROUPS: Record<string, string[]> = {
 
 export const PANTRY_INGREDIENT_CATALOG: PantryCatalogItem[] = [
   { name: "Paneer", canonicalName: "paneer", category: "Dairy", popular: true },
+  { name: "Maggi / Noodles", canonicalName: "maggi", category: "Grains", popular: true },
   { name: "Tomato", canonicalName: "tomato", category: "Vegetables", popular: true },
   { name: "Spinach (Palak)", canonicalName: "spinach", category: "Vegetables", popular: true },
   { name: "Onion", canonicalName: "onion", category: "Vegetables", popular: true },
   { name: "Garlic", canonicalName: "garlic", category: "Spices", popular: true },
   { name: "Ginger", canonicalName: "ginger", category: "Spices", popular: true },
   { name: "Capsicum", canonicalName: "capsicum", category: "Vegetables", popular: true },
-  { name: "Potato", canonicalName: "potato", category: "Vegetables", popular: true },
+  { name: "Potato (Aloo)", canonicalName: "potato", category: "Vegetables", popular: true },
   { name: "Basmati Rice", canonicalName: "rice", category: "Grains", popular: true },
   { name: "Yellow Dal", canonicalName: "dal", category: "Protein", popular: true },
   { name: "Pasta", canonicalName: "pasta", category: "Grains", popular: true },
   { name: "Mushroom", canonicalName: "mushroom", category: "Vegetables", popular: true },
-  { name: "Chickpeas", canonicalName: "chickpeas", category: "Protein", popular: true },
+  { name: "Chickpeas (Chole)", canonicalName: "chickpeas", category: "Protein", popular: true },
   { name: "Coriander", canonicalName: "coriander", category: "Herbs", popular: true },
   { name: "Firm Tofu", canonicalName: "tofu", category: "Protein", popular: true },
   { name: "Cumin (Jeera)", canonicalName: "cumin", category: "Spices", popular: true },
+  { name: "Green Peas (Matar)", canonicalName: "peas", category: "Vegetables", popular: true },
+  { name: "Cheese", canonicalName: "cheese", category: "Dairy", popular: true },
+  { name: "Bread / Pizza Base", canonicalName: "bread", category: "Grains", popular: true },
+  { name: "Sweet Corn", canonicalName: "corn", category: "Vegetables", popular: false },
   { name: "Green Chili", canonicalName: "green chili", category: "Spices", popular: false },
-  { name: "Black Beans", canonicalName: "black beans", category: "Protein", popular: false },
-  { name: "Noodles", canonicalName: "noodles", category: "Grains", popular: false },
+  { name: "Black Beans (Rajma)", canonicalName: "black beans", category: "Protein", popular: false },
+  { name: "Hakka Noodles", canonicalName: "noodles", category: "Grains", popular: false },
   { name: "Coconut Milk", canonicalName: "coconut milk", category: "Other", popular: false },
   { name: "Lemon / Lime", canonicalName: "lemon", category: "Vegetables", popular: false },
   { name: "Fresh Basil", canonicalName: "basil", category: "Herbs", popular: false },
@@ -109,12 +119,12 @@ export function getIngredientCategory(nameOrCanon: string): IngredientCategory {
   const canon = normalizeIngredientName(nameOrCanon);
   const found = PANTRY_INGREDIENT_CATALOG.find((item) => item.canonicalName === canon);
   if (found) return found.category;
-  if (["paneer", "yogurt", "cheese", "butter", "cream"].includes(canon)) return "Dairy";
+  if (["paneer", "yogurt", "cheese", "butter", "cream", "milk"].includes(canon)) return "Dairy";
   if (["tofu", "dal", "chickpeas", "black beans", "edamame", "tempeh"].includes(canon)) return "Protein";
-  if (["rice", "pasta", "noodles", "quinoa", "bread"].includes(canon)) return "Grains";
+  if (["rice", "pasta", "noodles", "maggi", "bread", "quinoa", "oats"].includes(canon)) return "Grains";
   if (["cumin", "garlic", "ginger", "green chili", "sesame", "turmeric"].includes(canon)) return "Spices";
   if (["coriander", "basil", "mint", "parsley"].includes(canon)) return "Herbs";
-  if (["tomato", "onion", "spinach", "capsicum", "potato", "mushroom", "lemon", "avocado"].includes(canon)) {
+  if (["tomato", "onion", "spinach", "capsicum", "potato", "mushroom", "lemon", "avocado", "peas", "corn"].includes(canon)) {
     return "Vegetables";
   }
   return "Other";
@@ -125,6 +135,12 @@ export function isIngredientMatch(userRawOrCanon: string, recipeIng: RecipeIngre
   if (!uCanon) return false;
   const rCanon = normalizeIngredientName(recipeIng.canonicalName || recipeIng.name);
   if (uCanon === rCanon) return true;
+  if (
+    (uCanon === "maggi" && rCanon === "noodles") ||
+    (uCanon === "noodles" && rCanon === "maggi")
+  ) {
+    return true;
+  }
   const rNameLower = recipeIng.name.toLowerCase();
   const uRawLower = userRawOrCanon.trim().toLowerCase();
   return rNameLower.includes(uRawLower) || rNameLower.includes(uCanon);
@@ -222,7 +238,7 @@ export function mapRawRecipeDbRecord(
       ? raw.instructions.map(String)
       : ["Prepare and chop ingredients.", "Cook over medium heat and season to taste."],
     image: String(raw?.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80"),
-    sourceUrl: String(raw?.sourceUrl || "/recipes"),
+    sourceUrl: "/recipes",
     adaptations: Array.isArray(raw?.adaptations) ? raw.adaptations : [],
   };
 }

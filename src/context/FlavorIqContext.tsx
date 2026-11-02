@@ -523,7 +523,13 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
   const clearIngredients = useCallback(() => {
     setActivePresetId(null);
     setIngredients([]);
-    showToast("Pantry Cleared", "Add ingredients or click 'Use my current pantry' to restore.", "info");
+    setCuisineState("Any");
+    setTasteState("Any");
+    setMaxCookingTimeState("Any");
+    setDietaryPreferenceState("No preference");
+    setCalorieRangeState("Any");
+    setProteinLevelState("Any");
+    showToast("Pantry & Filters Cleared", "Type any ingredient (e.g. Maggie, Pasta, Tofu, Aloo) to discover matching recipes!", "info");
   }, [showToast]);
 
   const restoreDefaultPantry = useCallback(() => {
@@ -907,7 +913,12 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
       restoreDefaultPantry,
       applySubstituteToPantry,
       rankedResults,
-      allRecipes: DEVELOPMENT_RECIPES,
+      allRecipes: [
+        ...DEVELOPMENT_RECIPES,
+        ...rankedResults
+          .map((r) => r.recipe)
+          .filter((rec) => !DEVELOPMENT_RECIPES.some((d) => d.id === rec.id)),
+      ],
       loading,
       loadingStage,
       error,
