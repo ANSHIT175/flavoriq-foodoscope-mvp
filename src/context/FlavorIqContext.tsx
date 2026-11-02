@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import {
   CalorieRangeOption,
@@ -324,6 +325,7 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
   const [selectedSubstitutionIngredient, setSelectedSubstitutionIngredient] =
     useState<string>("paneer");
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const latestReqIdRef = useRef<number>(0);
 
   const showToast = useCallback(
     (
@@ -406,11 +408,14 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
 
       setError(null);
 
+      const reqId = ++latestReqIdRef.current;
+
       // 1. Immediately compute deterministic client-side scores so UI updates with zero lag
       const instantRanked = await scoreAndRankRecipes(
         DEVELOPMENT_RECIPES,
         payload
       );
+      if (reqId !== latestReqIdRef.current) return;
       setRankedResults(instantRanked);
       setTotalCandidatesEvaluated(DEVELOPMENT_RECIPES.length);
 
@@ -421,9 +426,14 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
+        if (reqId !== latestReqIdRef.current) return;
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data.results) && data.results.length > 0) {
+          if (
+            reqId === latestReqIdRef.current &&
+            Array.isArray(data.results) &&
+            data.results.length > 0
+          ) {
             setRankedResults(data.results);
             setModeUsed(data.mode || "mock");
             setScoreLabel(

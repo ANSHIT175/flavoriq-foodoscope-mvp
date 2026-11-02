@@ -173,7 +173,7 @@ export default function RecipeCard({
                   Match Score
                 </span>
                 <span className="text-xs font-bold text-brand-dark block">
-                  Core Fit: {ingredientMatch.fitDisplay}
+                  Matched: {ingredientMatch.fitDisplay}
                 </span>
                 <span className="text-[11px] text-gray-500 block">
                   FlavorDB: {flavorCompatibility.flavorFitLabel}
@@ -193,7 +193,7 @@ export default function RecipeCard({
         <div className="lg:col-span-7 space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-bold text-brand-dark mr-1">
-              Matched Core ({ingredientMatch.matchedCoreIngredients.length}):
+              Matched Ingredients ({ingredientMatch.matchedCoreIngredients.length}):
             </span>
             {ingredientMatch.matchedCoreIngredients.length > 0 ? (
               ingredientMatch.matchedCoreIngredients.map((ing) => (
@@ -206,7 +206,7 @@ export default function RecipeCard({
 
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-bold text-brand-dark mr-1">
-              Missing Core ({ingredientMatch.missingCoreIngredients.length}):
+              Missing Ingredients ({ingredientMatch.missingCoreIngredients.length}):
             </span>
             {ingredientMatch.missingCoreIngredients.length > 0 ? (
               ingredientMatch.missingCoreIngredients.map((ing) => (
