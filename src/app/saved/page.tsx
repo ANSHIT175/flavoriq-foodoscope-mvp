@@ -1,22 +1,30 @@
 "use client";
 
-import React from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Heart,
   Clock,
-  Eye,
   Trash2,
   BarChart2,
   ChefHat,
   Flame,
+  BookOpen,
 } from "lucide-react";
 import { useFlavorIq } from "../../context/FlavorIqContext";
 import EmptyState from "../../components/EmptyState";
-import { ScoreRing } from "../../components/ScoreBreakdown";
 
-export default function SavedRecipesPage() {
+const SAVED_FILTERS = [
+  "All",
+  "Indian",
+  "Chinese",
+  "Italian",
+  "Vegan",
+  "High Protein",
+] as const;
+
+export default function SavedCookbookGalleryPage() {
   const router = useRouter();
   const {
     savedRecipeIds,
@@ -26,32 +34,69 @@ export default function SavedRecipesPage() {
     getRankedOrEvaluatedRecipe,
   } = useFlavorIq();
 
-  const savedItems = savedRecipeIds
-    .map((id) => getRankedOrEvaluatedRecipe(id))
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+  const [activeFilter, setActiveFilter] =
+    useState<(typeof SAVED_FILTERS)[number]>("All");
+
+  const savedItems = useMemo(() => {
+    const raw = savedRecipeIds
+      .map((id) => getRankedOrEvaluatedRecipe(id))
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+    if (activeFilter === "All") return raw;
+    if (activeFilter === "Vegan") {
+      return raw.filter((r) => r.recipe.dietaryTags.includes("Vegan"));
+    }
+    if (activeFilter === "High Protein") {
+      return raw.filter(
+        (r) =>
+          r.recipe.dietaryTags.includes("High-protein") ||
+          r.recipe.nutrition.proteinG >= 17
+      );
+    }
+    return raw.filter((r) => r.recipe.cuisine === activeFilter);
+  }, [savedRecipeIds, getRankedOrEvaluatedRecipe, activeFilter]);
 
   return (
     <div className="space-y-8">
-      <section className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-red-600 flex items-center gap-1.5">
-            <Heart className="w-4 h-4 fill-current" />
-            Personal Recipe Collection
+      {/* Cookbook Header */}
+      <section className="rounded-3xl bg-gradient-to-r from-brand-dark via-[#1F4428] to-brand-primary text-white p-6 sm:p-8 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1.5">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-brand-lime text-xs font-extrabold">
+            <BookOpen className="w-3.5 h-3.5" />
+            Personal Culinary Collection
           </span>
-          <h1 className="text-2xl font-extrabold text-brand-dark mt-0.5">
-            Saved Recipes ({savedItems.length})
+          <h1 className="text-2xl sm:text-3xl font-extrabold">
+            My Saved Recipes ({savedRecipeIds.length})
           </h1>
-          <p className="text-xs text-gray-600 mt-0.5">
-            Your bookmarked dishes with live-calculated Match Scores based on your current kitchen pantry.
+          <p className="text-xs sm:text-sm text-brand-lime/90">
+            Curated cookbook gallery with live pantry match scores and one-click cooking mode.
           </p>
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex flex-wrap gap-1.5">
+          {SAVED_FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setActiveFilter(f)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
+                activeFilter === f
+                  ? "bg-brand-lime text-brand-dark shadow"
+                  : "bg-white/10 text-white hover:bg-white/20"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
         </div>
       </section>
 
       {savedItems.length === 0 ? (
         <EmptyState
-          title="No saved recipes yet."
-          description="Explore personalized recommendations and click the Save button on any recipe card to build your personal cookbook."
-          actionLabel="Discover Recipes"
+          title="No saved recipes match this filter."
+          description="Explore recipes in the Recipe Finder or switch the filter back to 'All'."
+          actionLabel="Browse Recipe Finder"
           onAction={() => router.push("/recipes")}
         />
       ) : (
@@ -61,67 +106,63 @@ export default function SavedRecipesPage() {
             return (
               <article
                 key={recipe.id}
-                className="bg-white rounded-2xl border border-brand-border overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between"
+                className="group bg-white rounded-3xl border border-brand-border overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col justify-between"
               >
                 <div>
-                  <div className="relative h-44 bg-brand-dark/10">
+                  <div className="relative h-56 overflow-hidden bg-brand-dark">
                     <img
                       src={recipe.image}
                       alt={recipe.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold bg-brand-dark/90 text-brand-lime">
-                      {recipe.cuisine}
-                    </span>
-                  </div>
-
-                  <div className="p-5 flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <h2 className="text-base font-extrabold text-brand-dark line-clamp-2">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                      <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-white/95 text-brand-dark shadow">
+                        {recipe.cuisine}
+                      </span>
+                      <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-brand-lime text-brand-dark shadow">
+                        {scoreBreakdown.totalScore}/100 Match
+                      </span>
+                    </div>
+                    <div className="absolute bottom-3 left-4 right-4 text-white">
+                      <h2 className="text-lg font-extrabold leading-snug">
                         {recipe.name}
                       </h2>
-                      <div className="flex items-center gap-2 text-xs text-gray-600 font-medium">
+                      <div className="flex items-center gap-3 text-xs text-brand-lime mt-1 font-semibold">
                         <span className="inline-flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-brand-primary" />
+                          <Clock className="w-3.5 h-3.5" />
                           {recipe.cookingTimeMinutes} min
                         </span>
                         <span>•</span>
                         <span className="inline-flex items-center gap-1">
-                          <Flame className="w-3.5 h-3.5 text-orange-500" />
-                          {recipe.nutrition.calories} kcal
+                          <Flame className="w-3.5 h-3.5 text-orange-400" />
+                          {recipe.nutrition.calories} kcal ({recipe.nutrition.proteinG}g P)
                         </span>
                       </div>
                     </div>
-                    <ScoreRing score={scoreBreakdown.totalScore} size={50} />
                   </div>
                 </div>
 
-                <div className="px-5 py-3.5 bg-brand-surface/50 border-t border-brand-border flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
+                {/* Cookbook Tile Footer: Cook / Compare / Remove */}
+                <div className="p-4 bg-white flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
                     <Link
                       href={`/recipes/${recipe.id}`}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-brand-primary hover:bg-brand-dark text-white text-xs font-bold transition"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      View
-                    </Link>
-                    <Link
-                      href={`/recipes/${recipe.id}`}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-brand-dark hover:bg-brand-primary text-brand-lime text-xs font-bold transition"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-dark text-white text-xs font-extrabold transition"
                     >
                       <ChefHat className="w-3.5 h-3.5" />
                       Cook
                     </Link>
+
                     <button
                       type="button"
-                      onClick={() => toggleCompareRecipe(recipe.id)}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition ${
-                        compared
-                          ? "bg-brand-lime text-brand-dark border-brand-primary"
-                          : "bg-white text-brand-dark border-brand-border"
-                      }`}
+                      onClick={() => {
+                        if (!compared) toggleCompareRecipe(recipe.id);
+                        router.push("/compare");
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border border-brand-border text-xs font-bold transition"
                     >
-                      <BarChart2 className="w-3.5 h-3.5" />
+                      <BarChart2 className="w-3.5 h-3.5 text-brand-primary" />
                       Compare
                     </button>
                   </div>
@@ -129,7 +170,7 @@ export default function SavedRecipesPage() {
                   <button
                     type="button"
                     onClick={() => toggleSaveRecipe(recipe.id)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-red-700 hover:bg-red-50 border border-red-200 transition"
+                    className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-red-700 hover:bg-red-50 border border-red-200 transition"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Remove

@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   Calendar,
   Compass,
+  BookOpen,
   Settings,
   HelpCircle,
   ChefHat,
@@ -25,7 +26,7 @@ import {
 import { useFlavorIq } from "../context/FlavorIqContext";
 
 export const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: Home, emoji: "🏠" },
+  { href: "/dashboard", label: "Dashboard", icon: Home, emoji: "🏠" },
   { href: "/recipes", label: "Recipe Finder", icon: Utensils, emoji: "🍳" },
   { href: "/generator", label: "AI Recipe Generator", icon: Sparkles, emoji: "🧠" },
   { href: "/flavor-intelligence", label: "Flavor Intelligence", icon: Beaker, emoji: "🔬" },
@@ -36,6 +37,7 @@ export const NAV_ITEMS = [
   { href: "/grocery", label: "Grocery Planner", icon: ShoppingCart, emoji: "🛒", badgeKey: "grocery" },
   { href: "/meal-planner", label: "Meal Planner", icon: Calendar, emoji: "📅" },
   { href: "/cuisines", label: "Explore Cuisines", icon: Compass, emoji: "🌍" },
+  { href: "/about", label: "How It Works", icon: BookOpen, emoji: "💡" },
 ];
 
 export default function Sidebar({
@@ -64,7 +66,7 @@ export default function Sidebar({
       <nav className="space-y-1">
         {NAV_ITEMS.map((item) => {
           const isActive =
-            item.href === "/"
+            item.href === "/dashboard"
               ? pathname === "/" || pathname === "/dashboard"
               : pathname.startsWith(item.href);
           const count = getBadgeCount(item.badgeKey);
@@ -118,12 +120,16 @@ export default function Sidebar({
           {(!collapsed || isMobile) && <span>⚙️ Settings</span>}
         </Link>
         <Link
-          href="/settings#help"
+          href="/about"
           onClick={() => isMobile && setMobileOpen(false)}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-brand-lime/80 hover:bg-white/10 hover:text-white transition"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
+            pathname === "/about"
+              ? "bg-brand-primary text-white"
+              : "text-brand-lime/80 hover:bg-white/10 hover:text-white"
+          }`}
         >
           <HelpCircle className="w-4 h-4 shrink-0" />
-          {(!collapsed || isMobile) && <span>❓ Help &amp; Judge Guide</span>}
+          {(!collapsed || isMobile) && <span>❓ Help &amp; Pipeline</span>}
         </Link>
       </div>
     </div>
@@ -131,14 +137,13 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Desktop Collapsible Sidebar */}
       <aside
         className={`hidden lg:flex flex-col bg-brand-dark text-white border-r border-brand-primary/30 transition-all duration-300 shrink-0 sticky top-0 h-screen z-30 ${
           collapsed ? "w-20" : "w-64"
         }`}
       >
         <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
-          <Link href="/" className="flex items-center gap-2.5 min-w-0">
+          <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-brand-primary flex items-center justify-center shadow-xs shrink-0">
               <ChefHat className="w-5 h-5 text-brand-lime" />
             </div>
@@ -148,7 +153,7 @@ export default function Sidebar({
                   FLAVORIQ
                 </span>
                 <span className="text-[10px] text-brand-lime/80 font-medium block mt-0.5 truncate">
-                  Food Intelligence Engine
+                  Food Intelligence Platform
                 </span>
               </div>
             )}
@@ -170,7 +175,6 @@ export default function Sidebar({
         {renderLinks(false)}
       </aside>
 
-      {/* Mobile Drawer Overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div

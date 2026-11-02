@@ -16,15 +16,14 @@ import {
   Beaker,
   Utensils,
   Sparkles,
+  Award,
 } from "lucide-react";
 import { useFlavorIq } from "../../../context/FlavorIqContext";
 import ScoreBreakdown, { ScoreRing } from "../../../components/ScoreBreakdown";
 import IngredientChip from "../../../components/IngredientChip";
-import NutritionCard from "../../../components/NutritionCard";
-import SubstitutionCard from "../../../components/SubstitutionCard";
 import { SMART_SUBSTITUTIONS_CATALOG } from "../../../lib/foodoscope/mockCatalog";
 
-export default function RecipeDetailsPage() {
+export default function FullRecipeDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = String(params?.id || "fiq-rec-01");
@@ -38,10 +37,9 @@ export default function RecipeDetailsPage() {
     toggleCompareRecipe,
     addMissingIngredientsToGrocery,
     quickAddToMealPlan,
-    applySubstituteToPantry,
     addIngredient,
-    showToast,
     setSelectedNutritionRecipeId,
+    setSelectedSubstitutionIngredient,
   } = useFlavorIq();
 
   const evaluated = getRankedOrEvaluatedRecipe(id);
@@ -60,8 +58,13 @@ export default function RecipeDetailsPage() {
     );
   }
 
-  const { recipe, scoreBreakdown, ingredientMatch, flavorCompatibility, explanations } =
-    evaluated;
+  const {
+    recipe,
+    scoreBreakdown,
+    ingredientMatch,
+    flavorCompatibility,
+    explanations,
+  } = evaluated;
   const saved = isRecipeSaved(recipe.id);
   const compared = isRecipeCompared(recipe.id);
 
@@ -74,8 +77,37 @@ export default function RecipeDetailsPage() {
     .filter((r) => r.recipe.id !== recipe.id)
     .slice(0, 3);
 
+  const handleOpenSubstitute = () => {
+    const firstTarget =
+      recipe.adaptations[0]?.targetIngredient?.toLowerCase() ||
+      recipe.ingredients[0]?.canonicalName ||
+      "paneer";
+    setSelectedSubstitutionIngredient(firstTarget);
+    router.push(`/substitutions/${recipe.id}`);
+  };
+
+  const handleOpenNutrition = () => {
+    setSelectedNutritionRecipeId(recipe.id);
+    router.push(`/nutrition/${recipe.id}`);
+  };
+
+  const handleCompare = () => {
+    if (!compared) toggleCompareRecipe(recipe.id);
+    router.push("/compare");
+  };
+
+  const handleGrocery = () => {
+    addMissingIngredientsToGrocery(recipe);
+    router.push("/grocery");
+  };
+
+  const handleMealPlan = () => {
+    quickAddToMealPlan(recipe.id);
+    router.push("/meal-planner");
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-20">
       {/* Top Breadcrumb */}
       <div className="flex items-center justify-between">
         <Link
@@ -83,372 +115,338 @@ export default function RecipeDetailsPage() {
           className="inline-flex items-center gap-2 text-xs font-bold text-brand-primary hover:text-brand-dark transition"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Ranked Recommendations
+          Back to Recipe Finder
         </Link>
         <span className="text-xs font-mono text-gray-500">
           RecipeDB ID: {recipe.recipeDbId}
         </span>
       </div>
 
-      {/* Hero Recipe Card */}
-      <section className="bg-white rounded-3xl border border-brand-border overflow-hidden shadow-sm">
-        <div className="grid grid-cols-1 lg:grid-cols-12">
-          <div className="lg:col-span-5 relative min-h-[280px]">
-            <img
-              src={recipe.image}
-              alt={recipe.name}
-              className="w-full h-full object-cover min-h-[280px]"
-            />
-            <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-              <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-brand-dark text-brand-lime shadow">
+      {/* 1. IMMERSIVE HERO BANNER */}
+      <section className="relative rounded-3xl overflow-hidden shadow-lg border border-brand-border bg-brand-dark text-white min-h-[340px] flex items-end">
+        <img
+          src={recipe.image}
+          alt={recipe.name}
+          className="absolute inset-0 w-full h-full object-cover opacity-55"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/60 to-transparent" />
+
+        <div className="relative z-10 w-full p-6 sm:p-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          <div className="space-y-3 max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={`/cuisines/${recipe.cuisine.toLowerCase()}`}
+                className="px-3 py-1 rounded-full text-xs font-extrabold bg-brand-lime text-brand-dark"
+              >
                 {recipe.cuisine} • {recipe.region}
+              </Link>
+              {recipe.dietaryTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2.5 py-1 rounded-full text-xs font-bold bg-white/15 backdrop-blur-xs text-white"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
+              {recipe.name}
+            </h1>
+
+            <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-brand-lime font-semibold">
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="w-4 h-4" />
+                {recipe.cookingTimeMinutes} Minutes
               </span>
+              <span>•</span>
+              <span className="inline-flex items-center gap-1.5">
+                <Flame className="w-4 h-4 text-orange-400" />
+                {recipe.nutrition.calories} kcal
+              </span>
+              <span>•</span>
+              <span>{recipe.nutrition.proteinG}g Protein</span>
+              <span>•</span>
+              <span>Taste: {recipe.tasteProfile.join(", ")}</span>
             </div>
           </div>
 
-          <div className="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              <div className="space-y-2">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-dark">
-                  {recipe.name}
-                </h1>
-
-                <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-gray-600">
-                  <span className="inline-flex items-center gap-1">
-                    <Clock className="w-4 h-4 text-brand-primary" />
-                    {recipe.cookingTimeMinutes} min
-                  </span>
-                  <span>•</span>
-                  <span className="inline-flex items-center gap-1">
-                    <Flame className="w-4 h-4 text-orange-600" />
-                    {recipe.nutrition.calories} kcal
-                  </span>
-                  <span>•</span>
-                  <span className="text-emerald-800 font-bold">
-                    {recipe.nutrition.proteinG}g Protein
-                  </span>
-                  <span>•</span>
-                  <span>{recipe.nutrition.fiberG || 6}g Fiber</span>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {recipe.dietaryTags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-900 border border-emerald-200"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                  {recipe.tasteProfile.map((t) => (
-                    <span
-                      key={t}
-                      className="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 bg-brand-surface px-4 py-3 rounded-2xl border border-brand-border shrink-0 self-start">
-                <ScoreRing score={scoreBreakdown.totalScore} size={68} />
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-brand-primary block">
-                    Match Score
-                  </span>
-                  <span className="text-sm font-extrabold text-brand-dark block">
-                    Core Fit: {ingredientMatch.fitDisplay}
-                  </span>
-                  <span className="text-xs text-gray-600">
-                    FlavorDB: {flavorCompatibility.flavorFitLabel}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <ScoreBreakdown breakdown={scoreBreakdown} />
-
-            {/* 6 Action Buttons */}
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-brand-border">
-              <button
-                type="button"
-                onClick={() => toggleSaveRecipe(recipe.id)}
-                className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold border transition ${
-                  saved
-                    ? "bg-red-500 text-white border-red-500"
-                    : "bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border-brand-border"
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${saved ? "fill-current" : ""}`} />
-                {saved ? "Saved Recipe" : "Save Recipe"}
-              </button>
-
-              <a
-                href="#substitutions-section"
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border border-brand-border transition"
-              >
-                <RefreshCw className="w-4 h-4 text-brand-primary" />
-                Find Substitutions
-              </a>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedNutritionRecipeId(recipe.id);
-                  router.push("/nutrition");
-                }}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border border-brand-border transition"
-              >
-                <Flame className="w-4 h-4 text-orange-600" />
-                Analyze Nutrition
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  toggleCompareRecipe(recipe.id);
-                  router.push("/compare");
-                }}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border border-brand-border transition"
-              >
-                <BarChart2 className="w-4 h-4 text-brand-primary" />
-                {compared ? "View in Compare" : "Compare Recipe"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => addMissingIngredientsToGrocery(recipe)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition"
-              >
-                <ShoppingCart className="w-4 h-4" />
-                Add Ingredients to Grocery List
-              </button>
-
-              <button
-                type="button"
-                onClick={() => quickAddToMealPlan(recipe.id)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-primary hover:bg-brand-dark text-white transition"
-              >
-                <Calendar className="w-4 h-4" />
-                Add to Meal Plan
-              </button>
+          <div className="bg-white text-brand-dark rounded-2xl p-4 shadow-xl flex items-center gap-4 self-start lg:self-end shrink-0">
+            <ScoreRing score={scoreBreakdown.totalScore} size={68} />
+            <div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-brand-primary block">
+                Personalized Score
+              </span>
+              <span className="text-lg font-extrabold text-brand-dark block">
+                {scoreBreakdown.totalScore} / 100
+              </span>
+              <span className="text-xs text-gray-500">
+                Core Fit {ingredientMatch.fitDisplay} • FlavorDB {flavorCompatibility.flavorFitLabel}
+              </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Why This Recipe Fits You + FlavorDB Intelligence */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
-          <h2 className="text-base font-extrabold text-brand-dark flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-brand-primary" />
+      {/* 2. WHY THIS RECIPE FITS YOU */}
+      <section className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="w-5 h-5 text-brand-primary" />
+          <h2 className="text-lg font-extrabold text-brand-dark uppercase tracking-wide">
             Why This Recipe Fits You
           </h2>
-          <ul className="space-y-2.5 text-xs text-gray-700">
-            <li className="p-3 rounded-xl bg-brand-surface/50 border border-brand-border/60">
-              <strong className="text-brand-dark block">Pantry Coverage:</strong>
-              {explanations.ingredientFitText}
-            </li>
-            <li className="p-3 rounded-xl bg-brand-surface/50 border border-brand-border/60">
-              <strong className="text-brand-dark block">Culinary &amp; Sensory Fit:</strong>
-              {explanations.preferenceFitText}
-            </li>
-            <li className="p-3 rounded-xl bg-brand-surface/50 border border-brand-border/60">
-              <strong className="text-brand-dark block">Time &amp; Dietary Alignment:</strong>
-              {explanations.timeFitText} {explanations.dietaryFitText}
-            </li>
-          </ul>
-        </section>
-
-        <section className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-extrabold text-brand-dark flex items-center gap-2">
-              <Beaker className="w-5 h-5 text-brand-primary" />
-              FlavorDB Molecular Pairing Intelligence
-            </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-lime text-brand-dark">
-              {flavorCompatibility.flavorFitLabel} Synergy
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div className="p-4 rounded-2xl bg-brand-surface/60 border border-brand-border space-y-1">
+            <span className="font-extrabold text-brand-primary uppercase">
+              1. Pantry Utilization
             </span>
+            <p className="text-gray-700 leading-relaxed">
+              {explanations.ingredientFitText}
+            </p>
           </div>
-          <div className="space-y-2.5 text-xs text-gray-700">
-            {flavorCompatibility.supportingSignals.map((sig, i) => (
-              <div
-                key={i}
-                className="p-3.5 rounded-xl bg-brand-surface border border-brand-border leading-relaxed"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-brand-primary inline mr-1.5 -mt-0.5" />
-                {sig}
-              </div>
-            ))}
+          <div className="p-4 rounded-2xl bg-brand-surface/60 border border-brand-border space-y-1">
+            <span className="font-extrabold text-brand-primary uppercase">
+              2. Culinary &amp; Taste Fit
+            </span>
+            <p className="text-gray-700 leading-relaxed">
+              {explanations.preferenceFitText}
+            </p>
+          </div>
+          <div className="p-4 rounded-2xl bg-brand-surface/60 border border-brand-border space-y-1">
+            <span className="font-extrabold text-brand-primary uppercase">
+              3. Time &amp; Dietary Alignment
+            </span>
+            <p className="text-gray-700 leading-relaxed">
+              {explanations.timeFitText} {explanations.dietaryFitText}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. LARGE 100-POINT MATCH ANALYSIS */}
+      <section className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-brand-primary" />
+            <h2 className="text-lg font-extrabold text-brand-dark uppercase tracking-wide">
+              100-Point Match Analysis
+            </h2>
+          </div>
+          <span className="text-xs font-bold text-brand-primary">
+            Hover any metric bar for algorithmic formula details
+          </span>
+        </div>
+        <ScoreBreakdown breakdown={scoreBreakdown} />
+      </section>
+
+      {/* 4. FLAVORDB MOLECULAR INTELLIGENCE */}
+      <section className="bg-gradient-to-br from-brand-dark to-[#1E4627] text-white rounded-2xl p-6 shadow-md space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Beaker className="w-5 h-5 text-brand-lime" />
+            <h2 className="text-lg font-extrabold uppercase tracking-wide">
+              FlavorDB Molecular Intelligence ({scoreBreakdown.flavorCompatibility}/25 pts)
+            </h2>
           </div>
           <Link
             href="/flavor-intelligence"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-primary hover:underline pt-1"
+            className="px-3.5 py-1.5 rounded-xl bg-brand-lime text-brand-dark text-xs font-extrabold hover:bg-white transition"
           >
-            Open Interactive Flavor Pairing Network →
+            Open Interactive Flavor Network →
           </Link>
-        </section>
-      </div>
+        </div>
 
-      {/* Matched vs Missing Ingredients + Full Ingredients & Steps */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {flavorCompatibility.supportingSignals.map((sig, i) => (
+            <div
+              key={i}
+              className="p-4 rounded-xl bg-white/10 border border-white/15 text-xs leading-relaxed text-brand-lime/95"
+            >
+              <Sparkles className="w-4 h-4 text-brand-lime inline mr-1.5 -mt-0.5" />
+              {sig}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 5. INGREDIENTS & COOKING STEPS */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <section className="lg:col-span-5 bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
-          <h2 className="text-base font-extrabold text-brand-dark flex items-center gap-2">
+          <h2 className="text-lg font-extrabold text-brand-dark flex items-center gap-2">
             <Utensils className="w-5 h-5 text-brand-primary" />
-            Ingredients &amp; Pantry Match
+            Ingredients ({recipe.ingredients.length})
           </h2>
 
           <div className="space-y-3">
             <div>
               <span className="text-xs font-bold text-emerald-800 block mb-1.5">
-                Matched Core Ingredients ({ingredientMatch.matchedCoreIngredients.length}):
+                In Your Pantry ({ingredientMatch.matchedCoreIngredients.length} Core):
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {ingredientMatch.matchedCoreIngredients.length > 0 ? (
-                  ingredientMatch.matchedCoreIngredients.map((ing) => (
-                    <IngredientChip key={ing} name={ing} variant="matched" />
-                  ))
-                ) : (
-                  <span className="text-xs text-gray-500 italic">None in pantry</span>
-                )}
+                {ingredientMatch.matchedCoreIngredients.map((ing) => (
+                  <IngredientChip key={ing} name={ing} variant="matched" />
+                ))}
               </div>
             </div>
 
-            <div>
-              <span className="text-xs font-bold text-amber-800 block mb-1.5">
-                Missing Core Ingredients ({ingredientMatch.missingCoreIngredients.length} — click to add to pantry):
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {ingredientMatch.missingCoreIngredients.length > 0 ? (
-                  ingredientMatch.missingCoreIngredients.map((ing) => (
+            {ingredientMatch.missingCoreIngredients.length > 0 && (
+              <div>
+                <span className="text-xs font-bold text-amber-800 block mb-1.5">
+                  Missing Core (Click to add to pantry):
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {ingredientMatch.missingCoreIngredients.map((ing) => (
                     <IngredientChip
                       key={ing}
                       name={ing}
                       variant="missing"
                       onClick={() => addIngredient(ing)}
                     />
-                  ))
-                ) : (
-                  <span className="text-xs font-semibold text-emerald-700">
-                    You have all core ingredients!
-                  </span>
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
-          <div className="pt-3 border-t border-brand-border space-y-2">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block">
-              Complete Measured Ingredient List
-            </span>
-            <ul className="divide-y divide-brand-border/50 text-xs">
-              {recipe.ingredients.map((ing) => (
-                <li
-                  key={ing.name}
-                  className="py-2 flex items-center justify-between gap-2"
-                >
-                  <span className="font-semibold text-brand-dark">
-                    {ing.name}{" "}
-                    {ing.isCore && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-lime/70 text-brand-dark ml-1">
-                        Core
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-gray-600">{ing.quantity}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <ul className="divide-y divide-brand-border/60 text-xs pt-2 border-t border-brand-border">
+            {recipe.ingredients.map((ing) => (
+              <li
+                key={ing.name}
+                className="py-2.5 flex items-center justify-between gap-2"
+              >
+                <span className="font-bold text-brand-dark">
+                  {ing.name}
+                  {ing.isCore && (
+                    <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-brand-lime text-brand-dark">
+                      Core
+                    </span>
+                  )}
+                </span>
+                <span className="text-gray-600 font-medium">{ing.quantity}</span>
+              </li>
+            ))}
+          </ul>
         </section>
 
-        {/* Cooking Steps */}
         <section className="lg:col-span-7 bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 className="text-base font-extrabold text-brand-dark">
-              Step-by-Step Cooking Instructions
+            <h2 className="text-lg font-extrabold text-brand-dark">
+              Cooking Steps
             </h2>
-            <span className="text-xs font-semibold text-brand-primary bg-brand-surface px-3 py-1 rounded-full border border-brand-border">
+            <span className="text-xs font-bold text-brand-primary bg-brand-surface px-3 py-1 rounded-full border border-brand-border">
               Processes: {recipe.processes.join(" → ")}
             </span>
           </div>
 
-          <ol className="space-y-3">
+          <ol className="space-y-3.5">
             {recipe.instructions.map((step, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-3.5 p-4 rounded-xl bg-brand-surface/50 border border-brand-border/80"
+                className="flex items-start gap-3.5 p-4 rounded-2xl bg-brand-surface/50 border border-brand-border"
               >
-                <span className="w-6 h-6 rounded-full bg-brand-dark text-brand-lime text-xs font-extrabold flex items-center justify-center shrink-0 mt-0.5">
+                <span className="w-7 h-7 rounded-xl bg-brand-dark text-brand-lime text-xs font-extrabold flex items-center justify-center shrink-0">
                   {idx + 1}
                 </span>
-                <p className="text-xs sm:text-sm text-brand-dark leading-relaxed">
+                <p className="text-xs sm:text-sm text-brand-dark leading-relaxed pt-0.5">
                   {step}
                 </p>
               </li>
             ))}
           </ol>
-
-          <div className="pt-2 flex flex-wrap gap-2 text-xs text-gray-600">
-            <span className="font-bold text-brand-dark">Utensils Needed:</span>
-            {recipe.utensils.map((u) => (
-              <span
-                key={u}
-                className="px-2.5 py-0.5 rounded-md bg-white border border-brand-border capitalize"
-              >
-                {u}
-              </span>
-            ))}
-          </div>
         </section>
       </div>
 
-      {/* Nutrition Section */}
-      <section>
-        <NutritionCard
-          recipe={recipe}
-          onOptimizeToast={(msg) => showToast("Nutrition Updated", msg)}
-        />
-      </section>
-
-      {/* Smart Substitutions Section */}
-      <section id="substitutions-section" className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
+      {/* 6. NUTRITION & SMART SUBSTITUTIONS GATEWAYS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm flex flex-col justify-between space-y-4">
+          <div className="space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-orange-600">
+              Macro Profile
+            </span>
             <h2 className="text-lg font-extrabold text-brand-dark">
-              Smart Ingredient Substitutions (FlavorDB-Supported)
+              Nutrition Breakdown
             </h2>
-            <p className="text-xs text-gray-600">
-              Swap missing or restricted ingredients using shared aroma volatile compounds
-            </p>
+            <div className="grid grid-cols-4 gap-2 pt-2 text-center text-xs">
+              <div className="p-3 rounded-xl bg-brand-surface">
+                <strong className="text-sm text-brand-dark block">
+                  {recipe.nutrition.calories}
+                </strong>
+                kcal
+              </div>
+              <div className="p-3 rounded-xl bg-emerald-50 text-emerald-900">
+                <strong className="text-sm block">{recipe.nutrition.proteinG}g</strong>
+                Protein
+              </div>
+              <div className="p-3 rounded-xl bg-brand-surface">
+                <strong className="text-sm text-brand-dark block">
+                  {recipe.nutrition.carbsG}g
+                </strong>
+                Carbs
+              </div>
+              <div className="p-3 rounded-xl bg-brand-surface">
+                <strong className="text-sm text-brand-dark block">
+                  {recipe.nutrition.fatG}g
+                </strong>
+                Fat
+              </div>
+            </div>
           </div>
-          <Link
-            href="/substitutions"
-            className="text-xs font-bold text-brand-primary hover:underline"
+
+          <button
+            type="button"
+            onClick={handleOpenNutrition}
+            className="w-full py-2.5 px-4 rounded-xl bg-brand-primary hover:bg-brand-dark text-white text-xs font-bold transition"
           >
-            Open Full Substitution Lab →
-          </Link>
-        </div>
+            Open Full Nutrition Analytics Dashboard →
+          </button>
+        </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {substitutions.map((sub, i) => (
-            <SubstitutionCard
-              key={i}
-              sub={sub}
-              onUseSubstitute={(target, substitute) =>
-                applySubstituteToPantry(target, substitute)
-              }
-            />
-          ))}
-        </div>
-      </section>
+        <section className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm flex flex-col justify-between space-y-4">
+          <div className="space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-brand-primary">
+              FlavorDB Adaptations
+            </span>
+            <h2 className="text-lg font-extrabold text-brand-dark">
+              Smart Ingredient Substitutions
+            </h2>
+            <div className="space-y-2 pt-1">
+              {substitutions.slice(0, 2).map((sub, i) => (
+                <div
+                  key={i}
+                  className="p-3 rounded-xl bg-brand-surface/60 border border-brand-border text-xs flex items-center justify-between"
+                >
+                  <div>
+                    <span className="font-bold text-brand-dark">
+                      {sub.targetIngredient} → {sub.substituteIngredient}
+                    </span>
+                    <p className="text-[11px] text-gray-600 line-clamp-1">
+                      {sub.reasoning}
+                    </p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full font-extrabold bg-brand-lime text-brand-dark shrink-0">
+                    {sub.compatibilityScore || 92}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Related Recipes */}
+          <button
+            type="button"
+            onClick={handleOpenSubstitute}
+            className="w-full py-2.5 px-4 rounded-xl bg-brand-dark hover:bg-brand-primary text-brand-lime text-xs font-bold transition"
+          >
+            Open 3-Column Substitution Workspace →
+          </button>
+        </section>
+      </div>
+
+      {/* 7. RELATED RECIPES */}
       {relatedRecipes.length > 0 && (
-        <section className="space-y-4">
+        <section className="space-y-3">
           <h2 className="text-lg font-extrabold text-brand-dark">
-            Related Personalized Matches
+            Related Recipes
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {relatedRecipes.map((rel) => (
@@ -466,11 +464,11 @@ export default function RecipeDetailsPage() {
                   <p className="text-xs font-extrabold text-brand-dark truncate">
                     {rel.recipe.name}
                   </p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">
-                    {rel.recipe.cuisine} • {rel.recipe.cookingTimeMinutes} min
+                  <p className="text-[11px] text-gray-500">
+                    {rel.recipe.cuisine} • {rel.recipe.cookingTimeMinutes}m
                   </p>
-                  <span className="inline-block mt-1 text-[11px] font-extrabold text-brand-primary">
-                    Match Score: {rel.scoreBreakdown.totalScore}/100
+                  <span className="text-[11px] font-extrabold text-brand-primary">
+                    {rel.scoreBreakdown.totalScore}/100 Match
                   </span>
                 </div>
               </Link>
@@ -478,6 +476,67 @@ export default function RecipeDetailsPage() {
           </div>
         </section>
       )}
+
+      {/* 8. STICKY FLOATING ACTION BAR */}
+      <div className="fixed bottom-14 lg:bottom-4 left-1/2 -translate-x-1/2 z-40 bg-brand-dark/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-brand-lime/30 flex flex-wrap items-center justify-center gap-2 max-w-[95vw]">
+        <button
+          type="button"
+          onClick={() => toggleSaveRecipe(recipe.id)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+            saved
+              ? "bg-red-500 text-white"
+              : "bg-white/10 hover:bg-white/20 text-white"
+          }`}
+        >
+          <Heart className={`w-3.5 h-3.5 ${saved ? "fill-current" : ""}`} />
+          ❤️ {saved ? "Saved" : "Save"}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleCompare}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 transition"
+        >
+          <BarChart2 className="w-3.5 h-3.5 text-brand-lime" />
+          📊 Compare
+        </button>
+
+        <button
+          type="button"
+          onClick={handleOpenSubstitute}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 transition"
+        >
+          <RefreshCw className="w-3.5 h-3.5 text-brand-lime" />
+          🔄 Substitute
+        </button>
+
+        <button
+          type="button"
+          onClick={handleOpenNutrition}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 transition"
+        >
+          <Flame className="w-3.5 h-3.5 text-orange-400" />
+          🥗 Nutrition
+        </button>
+
+        <button
+          type="button"
+          onClick={handleGrocery}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 transition"
+        >
+          <ShoppingCart className="w-3.5 h-3.5 text-brand-lime" />
+          🛒 Grocery
+        </button>
+
+        <button
+          type="button"
+          onClick={handleMealPlan}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-brand-lime text-brand-dark hover:bg-white transition"
+        >
+          <Calendar className="w-3.5 h-3.5" />
+          📅 Meal Plan
+        </button>
+      </div>
     </div>
   );
 }

@@ -8,7 +8,6 @@ import {
   RefreshCw,
   Trash2,
   Plus,
-  Flame,
 } from "lucide-react";
 import {
   useFlavorIq,
@@ -18,7 +17,7 @@ import {
   MealSlotType,
 } from "../../context/FlavorIqContext";
 
-export default function WeeklyMealPlannerPage() {
+export default function WeeklyMealPlannerCalendarPage() {
   const {
     mealPlan,
     allRecipes,
@@ -33,166 +32,189 @@ export default function WeeklyMealPlannerPage() {
   );
 
   const weeklyStats = useMemo(() => {
-    let totalCalories = 0;
-    let totalProtein = 0;
-    let scheduledMeals = 0;
-
-    for (const day of DAYS_OF_WEEK) {
-      for (const slot of MEAL_SLOTS) {
-        const recId = mealPlan[day]?.[slot];
+    let calories = 0;
+    let protein = 0;
+    let planned = 0;
+    for (const d of DAYS_OF_WEEK) {
+      for (const s of MEAL_SLOTS) {
+        const recId = mealPlan[d]?.[s];
         if (recId) {
           const rec = allRecipes.find((r) => r.id === recId);
           if (rec) {
-            totalCalories += rec.nutrition.calories;
-            totalProtein += rec.nutrition.proteinG;
-            scheduledMeals++;
+            calories += rec.nutrition.calories;
+            protein += rec.nutrition.proteinG;
+            planned++;
           }
         }
       }
     }
-    return { totalCalories, totalProtein, scheduledMeals };
+    return { calories, protein, planned };
   }, [mealPlan, allRecipes]);
 
   return (
     <div className="space-y-8">
-      <section className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-brand-primary flex items-center gap-1.5">
-            <Calendar className="w-4 h-4" />
-            7-Day Personalized Nutrition &amp; Meal Schedule
+      {/* Calendar Header + Weekly Summary Cards */}
+      <section className="rounded-3xl bg-gradient-to-r from-brand-dark to-brand-primary text-white p-6 sm:p-8 shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="space-y-1.5">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-brand-lime text-xs font-extrabold">
+            <Calendar className="w-3.5 h-3.5" />
+            Weekly Culinary Calendar
           </span>
-          <h1 className="text-2xl font-extrabold text-brand-dark mt-0.5">
-            Weekly Meal Planner
+          <h1 className="text-2xl sm:text-3xl font-extrabold">
+            📅 Weekly Meal Planner (Monday → Sunday)
           </h1>
-          <p className="text-xs text-gray-600 mt-0.5">
-            Plan Breakfast, Lunch, and Dinner across Monday–Sunday with instant meal swapping and weekly macro tracking.
+          <p className="text-xs sm:text-sm text-brand-lime/90">
+            Schedule Breakfast, Lunch, and Dinner across all 7 days with live calorie &amp; protein tracking.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="bg-brand-surface px-4 py-2 rounded-xl border border-brand-border text-xs">
-            <span className="font-bold text-brand-dark block">
-              Weekly Summary ({weeklyStats.scheduledMeals} meals):
-            </span>
-            <span className="text-brand-primary font-extrabold">
-              {weeklyStats.totalCalories.toLocaleString()} kcal •{" "}
-              {weeklyStats.totalProtein}g Protein
-            </span>
+          <div className="grid grid-cols-3 gap-2 bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15 text-center text-xs">
+            <div className="px-2">
+              <strong className="text-base text-brand-lime block">
+                {weeklyStats.calories.toLocaleString()}
+              </strong>
+              <span className="text-[10px] text-white/80">Calories</span>
+            </div>
+            <div className="px-2 border-x border-white/15">
+              <strong className="text-base text-brand-lime block">
+                {weeklyStats.protein}g
+              </strong>
+              <span className="text-[10px] text-white/80">Protein</span>
+            </div>
+            <div className="px-2">
+              <strong className="text-base text-brand-lime block">
+                {weeklyStats.planned}
+              </strong>
+              <span className="text-[10px] text-white/80">Recipes Planned</span>
+            </div>
           </div>
 
           <button
             type="button"
             onClick={autoPopulateMealPlan}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-primary hover:bg-brand-dark text-white text-xs font-bold transition shadow-xs"
+            className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-brand-lime text-brand-dark hover:bg-white text-xs font-extrabold shadow transition"
           >
-            <Sparkles className="w-3.5 h-3.5 text-brand-lime" />
-            Auto-Fill 7-Day Plan
+            <Sparkles className="w-4 h-4 text-brand-primary" />
+            Auto-Fill Week
           </button>
         </div>
       </section>
 
-      {/* Active Recipe Picker for Empty "+ Add Recipe" Slots */}
+      {/* Active Recipe Selector for "+ Add Meal" */}
       <section className="bg-white rounded-2xl border border-brand-border p-4 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-        <span className="text-xs font-bold text-brand-dark">
-          Recipe to assign when clicking &ldquo;+ Add Recipe&rdquo; on any slot:
+        <span className="text-xs font-extrabold text-brand-dark">
+          Active Recipe for &ldquo;+ Add Meal&rdquo; Buttons:
         </span>
         <select
           value={selectedRecipeForAdd}
           onChange={(e) => setSelectedRecipeForAdd(e.target.value)}
-          className="rounded-xl border border-brand-border bg-brand-surface/50 px-3 py-2 text-xs font-bold text-brand-dark min-w-[260px]"
+          className="rounded-xl border border-brand-border bg-brand-surface/50 px-3.5 py-2 text-xs font-bold text-brand-dark min-w-[280px]"
         >
           {allRecipes.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name} ({r.cuisine} • {r.nutrition.calories} kcal •{" "}
-              {r.nutrition.proteinG}g Prot)
+              {r.nutrition.proteinG}g Protein)
             </option>
           ))}
         </select>
       </section>
 
-      {/* 7-Day Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
-        {DAYS_OF_WEEK.map((day: DayOfWeek) => (
-          <div
-            key={day}
-            className="bg-white rounded-2xl border border-brand-border p-4 shadow-2xs flex flex-col justify-between space-y-3"
-          >
-            <div className="border-b border-brand-border pb-2 flex items-center justify-between">
-              <h2 className="text-sm font-extrabold text-brand-dark">{day}</h2>
-              <Flame className="w-3.5 h-3.5 text-brand-primary" />
-            </div>
-
-            <div className="space-y-3 flex-1">
-              {MEAL_SLOTS.map((slot: MealSlotType) => {
-                const recId = mealPlan[day]?.[slot];
-                const rec = allRecipes.find((r) => r.id === recId);
-
-                return (
-                  <div
-                    key={slot}
-                    className="rounded-xl border border-brand-border/80 bg-brand-surface/40 p-2.5 space-y-2"
+      {/* WEEKLY CALENDAR MATRIX: Rows = Breakfast / Lunch / Dinner, Columns = Monday -> Sunday */}
+      <section className="bg-white rounded-3xl border border-brand-border shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse min-w-[920px]">
+            <thead>
+              <tr className="bg-brand-dark text-white">
+                <th className="p-3.5 text-left text-xs font-extrabold uppercase tracking-wider w-28 border-r border-white/15">
+                  Meal Slot
+                </th>
+                {DAYS_OF_WEEK.map((day: DayOfWeek) => (
+                  <th
+                    key={day}
+                    className="p-3.5 text-left text-xs font-extrabold uppercase tracking-wider border-r border-white/10"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
-                        {slot}
-                      </span>
-                      {rec && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => swapMealInPlan(day, slot)}
-                            title="Swap Meal"
-                            className="p-1 rounded hover:bg-brand-lime text-brand-primary"
-                          >
-                            <RefreshCw className="w-3 h-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeRecipeFromMealPlan(day, slot)}
-                            title="Remove Meal"
-                            className="p-1 rounded hover:bg-red-50 text-red-600"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    {day}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-brand-border">
+              {MEAL_SLOTS.map((slot: MealSlotType) => (
+                <tr key={slot} className="align-top">
+                  <td className="p-4 bg-brand-surface/60 font-extrabold text-xs text-brand-dark border-r border-brand-border">
+                    {slot}
+                  </td>
+                  {DAYS_OF_WEEK.map((day: DayOfWeek) => {
+                    const recId = mealPlan[day]?.[slot];
+                    const rec = allRecipes.find((r) => r.id === recId);
 
-                    {rec ? (
-                      <div className="space-y-1">
-                        <Link
-                          href={`/recipes/${rec.id}`}
-                          className="text-xs font-bold text-brand-dark hover:text-brand-primary line-clamp-2 block"
-                        >
-                          {rec.name}
-                        </Link>
-                        <p className="text-[10px] text-gray-500">
-                          {rec.nutrition.calories} kcal • {rec.nutrition.proteinG}g P
-                        </p>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          assignRecipeToMealPlan(
-                            day,
-                            slot,
-                            selectedRecipeForAdd
-                          )
-                        }
-                        className="w-full py-2 rounded-lg border border-dashed border-brand-border hover:border-brand-primary text-[11px] font-semibold text-brand-primary flex items-center justify-center gap-1 hover:bg-white transition"
+                    return (
+                      <td
+                        key={`${day}-${slot}`}
+                        className="p-3 border-r border-brand-border/60 w-36"
                       >
-                        <Plus className="w-3 h-3" />
-                        Add Recipe
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
+                        {rec ? (
+                          <div className="rounded-xl border border-brand-border bg-brand-surface/40 p-2.5 space-y-2">
+                            <img
+                              src={rec.image}
+                              alt={rec.name}
+                              className="w-full h-16 object-cover rounded-lg"
+                            />
+                            <Link
+                              href={`/recipes/${rec.id}`}
+                              className="text-xs font-extrabold text-brand-dark hover:text-brand-primary line-clamp-2 block leading-snug"
+                            >
+                              {rec.name}
+                            </Link>
+                            <p className="text-[10px] font-semibold text-gray-500">
+                              {rec.nutrition.calories} kcal •{" "}
+                              {rec.nutrition.proteinG}g P
+                            </p>
+                            <div className="flex items-center justify-between pt-1 border-t border-brand-border/60">
+                              <button
+                                type="button"
+                                onClick={() => swapMealInPlan(day, slot)}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-brand-primary hover:underline"
+                              >
+                                <RefreshCw className="w-3 h-3" />
+                                Swap Meal
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeRecipeFromMealPlan(day, slot)}
+                                className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-600 hover:underline"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              assignRecipeToMealPlan(
+                                day,
+                                slot,
+                                selectedRecipeForAdd
+                              )
+                            }
+                            className="w-full h-28 rounded-xl border-2 border-dashed border-brand-border hover:border-brand-primary hover:bg-brand-surface/50 flex flex-col items-center justify-center gap-1 text-xs font-bold text-brand-primary transition"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Add Meal</span>
+                          </button>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

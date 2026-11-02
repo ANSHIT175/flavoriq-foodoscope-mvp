@@ -8,23 +8,25 @@ import {
   Copy,
   CheckCircle2,
   Check,
-  Utensils,
+  CheckSquare,
 } from "lucide-react";
 import { useFlavorIq } from "../../context/FlavorIqContext";
 import { getIngredientCategory } from "../../lib/foodoscope/normalizers";
 import { IngredientCategory } from "../../lib/foodoscope/types";
 
-const GROUP_ORDER: IngredientCategory[] = [
-  "Vegetables",
-  "Protein",
-  "Dairy",
-  "Grains",
-  "Spices",
-  "Herbs",
-  "Other",
+const CATEGORY_META: {
+  key: IngredientCategory;
+  label: string;
+}[] = [
+  { key: "Vegetables", label: "🥕 Vegetables" },
+  { key: "Dairy", label: "🥛 Dairy" },
+  { key: "Grains", label: "🌾 Grains" },
+  { key: "Spices", label: "🌶 Spices & Herbs" },
+  { key: "Protein", label: "🥩 Protein" },
+  { key: "Other", label: "📦 Other" },
 ];
 
-export default function SmartGroceryPlannerPage() {
+export default function SmartGroceryChecklistPage() {
   const {
     ingredients,
     groceryItems,
@@ -41,49 +43,65 @@ export default function SmartGroceryPlannerPage() {
   const [newItemQty, setNewItemQty] = useState("1 pack");
 
   const groupedGrocery = useMemo(() => {
-    const map: Record<string, typeof groceryItems> = {};
-    for (const cat of GROUP_ORDER) map[cat] = [];
+    const map: Record<string, typeof groceryItems> = {
+      Vegetables: [],
+      Dairy: [],
+      Grains: [],
+      Spices: [],
+      Protein: [],
+      Other: [],
+    };
     for (const item of groceryItems) {
-      const cat = item.category || "Other";
+      const cat =
+        item.category === "Herbs" ? "Spices" : item.category || "Other";
       if (!map[cat]) map[cat] = [];
       map[cat].push(item);
     }
     return map;
   }, [groceryItems]);
 
+  const handleCheckAll = () => {
+    groceryItems.forEach((item) => {
+      if (!item.checked) toggleGroceryItem(item.id);
+    });
+    showToast("Checked All Items", "Marked all shopping list items as completed.");
+  };
+
   const handleCopyList = () => {
     const lines = [
-      "FLAVORIQ — Smart Grocery List",
-      "=============================",
+      "FLAVORIQ — Smart Shopping Checklist",
+      "====================================",
       ...groceryItems.map(
-        (i) => `${i.checked ? "[x]" : "[ ]"} ${i.name} (${i.quantity}) — [${i.category}]`
+        (i) => `${i.checked ? "[x]" : "[ ]"} ${i.name} (${i.quantity})`
       ),
     ];
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(lines.join("\n")).catch(() => {});
     }
     showToast(
-      "Grocery List Copied!",
-      `Copied ${groceryItems.length} item(s) to your clipboard.`
+      "Copied to Clipboard!",
+      `Copied ${groceryItems.length} shopping items.`
     );
   };
 
   return (
     <div className="space-y-8">
-      <section className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Top Checklist Action Header */}
+      <section className="rounded-3xl bg-gradient-to-r from-brand-dark to-brand-primary text-white p-6 sm:p-8 shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-brand-primary flex items-center gap-1.5">
-            <ShoppingCart className="w-4 h-4" />
-            Pantry Gap &amp; Shopping Intelligence
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-brand-lime text-xs font-extrabold">
+            <ShoppingCart className="w-3.5 h-3.5" />
+            Smart Kitchen Gap Checklist
           </span>
-          <h1 className="text-2xl font-extrabold text-brand-dark mt-0.5">
-            Smart Grocery List
+          <h1 className="text-2xl sm:text-3xl font-extrabold mt-2">
+            🛒 Smart Grocery List
           </h1>
-          <p className="text-xs text-gray-600 mt-0.5">
-            Automatically separates what you already have in your kitchen from missing ingredients needed for your recipes.
+          <p className="text-xs sm:text-sm text-brand-lime/90 mt-1">
+            Separates ingredients already in your pantry from items you need to buy, organized by supermarket aisle.
           </p>
         </div>
 
+        {/* 4 Required Buttons: Add All, Check All, Clear, Copy List */}
         <div className="flex flex-wrap items-center gap-2">
           {rankedResults[0] && (
             <button
@@ -91,67 +109,48 @@ export default function SmartGroceryPlannerPage() {
               onClick={() =>
                 addMissingIngredientsToGrocery(rankedResults[0].recipe)
               }
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-primary hover:bg-brand-dark text-white text-xs font-bold transition"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-lime text-brand-dark hover:bg-white text-xs font-extrabold transition"
             >
               <Plus className="w-3.5 h-3.5" />
-              Add All Missing from #{1} Match
+              Add All
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={handleCheckAll}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-bold transition"
+          >
+            <CheckSquare className="w-3.5 h-3.5 text-brand-lime" />
+            Check All
+          </button>
+
           <button
             type="button"
             onClick={handleCopyList}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border border-brand-border text-xs font-bold transition"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-bold transition"
           >
-            <Copy className="w-3.5 h-3.5 text-brand-primary" />
+            <Copy className="w-3.5 h-3.5 text-brand-lime" />
             Copy List
           </button>
-          {groceryItems.length > 0 && (
-            <button
-              type="button"
-              onClick={clearGroceryList}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Clear
-            </button>
-          )}
+
+          <button
+            type="button"
+            onClick={clearGroceryList}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-500/80 hover:bg-red-500 text-white text-xs font-bold transition"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Clear
+          </button>
         </div>
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Ingredients Already Available */}
-        <section className="lg:col-span-4 bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4 self-start">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-extrabold text-brand-dark flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              Ingredients Already Available ({ingredients.length})
-            </h2>
-          </div>
-          <p className="text-xs text-gray-500">
-            These items are currently in your active kitchen pantry and excluded from shopping needs:
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {ingredients.map((ing) => (
-              <span
-                key={ing}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-900 border border-emerald-200"
-              >
-                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                {ing}
-                <span className="text-[10px] text-emerald-700/80">
-                  ({getIngredientCategory(ing)})
-                </span>
-              </span>
-            ))}
-          </div>
-        </section>
-
-        {/* Right: Ingredients You Need to Buy */}
-        <section className="lg:col-span-8 bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h2 className="text-base font-extrabold text-brand-dark flex items-center gap-2">
-              <Utensils className="w-5 h-5 text-brand-primary" />
-              Ingredients You Need to Buy ({groceryItems.length})
+        {/* Left: Need to Buy Checklist */}
+        <section className="lg:col-span-8 bg-white rounded-3xl border border-brand-border p-6 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-border pb-4">
+            <h2 className="text-lg font-extrabold text-brand-dark">
+              🛒 Need to Buy ({groceryItems.filter((i) => !i.checked).length} remaining)
             </h2>
 
             <form
@@ -167,19 +166,19 @@ export default function SmartGroceryPlannerPage() {
                 type="text"
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
-                placeholder="Add item (e.g., Kasuri Methi)..."
-                className="rounded-xl border border-brand-border px-3 py-1.5 text-xs bg-brand-surface/30"
+                placeholder="Add custom grocery item..."
+                className="rounded-xl border border-brand-border px-3 py-2 text-xs bg-brand-surface/30"
               />
               <input
                 type="text"
                 value={newItemQty}
                 onChange={(e) => setNewItemQty(e.target.value)}
                 placeholder="Qty"
-                className="w-24 rounded-xl border border-brand-border px-2.5 py-1.5 text-xs bg-brand-surface/30"
+                className="w-24 rounded-xl border border-brand-border px-2.5 py-2 text-xs bg-brand-surface/30"
               />
               <button
                 type="submit"
-                className="px-3 py-1.5 rounded-xl bg-brand-primary text-white text-xs font-bold"
+                className="px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-dark text-white text-xs font-bold transition"
               >
                 + Add
               </button>
@@ -187,35 +186,47 @@ export default function SmartGroceryPlannerPage() {
           </div>
 
           {groceryItems.length === 0 ? (
-            <p className="text-xs text-gray-500 italic py-6 text-center">
-              Your shopping list is empty! Click &ldquo;Add All Missing&rdquo; above or add items from any recipe card.
-            </p>
+            <div className="p-8 text-center text-xs text-gray-500 space-y-2">
+              <p className="font-bold text-sm text-brand-dark">
+                Your shopping checklist is empty!
+              </p>
+              <p>
+                Click &ldquo;Add All&rdquo; at the top right or click &ldquo;Add to Grocery&rdquo; on any recipe.
+              </p>
+            </div>
           ) : (
-            <div className="space-y-5">
-              {GROUP_ORDER.map((cat) => {
-                const list = groupedGrocery[cat] || [];
-                if (list.length === 0) return null;
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {CATEGORY_META.map((cat) => {
+                const items = groupedGrocery[cat.key] || [];
+                if (items.length === 0) return null;
                 return (
-                  <div key={cat} className="space-y-2">
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-brand-primary border-b border-brand-border/60 pb-1">
-                      {cat} ({list.length})
+                  <div
+                    key={cat.key}
+                    className="rounded-2xl border border-brand-border bg-brand-surface/30 p-4 space-y-3"
+                  >
+                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-brand-dark border-b border-brand-border pb-2 flex items-center justify-between">
+                      <span>{cat.label}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-white text-brand-primary text-[10px]">
+                        {items.length}
+                      </span>
                     </h3>
-                    <div className="divide-y divide-brand-border/50">
-                      {list.map((item) => (
+
+                    <div className="space-y-2">
+                      {items.map((item) => (
                         <div
                           key={item.id}
-                          className="py-2.5 flex items-center justify-between gap-3 text-xs"
+                          className="p-2.5 rounded-xl bg-white border border-brand-border/80 flex items-center justify-between gap-2 text-xs"
                         >
-                          <label className="flex items-center gap-2.5 cursor-pointer">
+                          <label className="flex items-center gap-2.5 cursor-pointer min-w-0">
                             <input
                               type="checkbox"
                               checked={item.checked}
                               onChange={() => toggleGroceryItem(item.id)}
-                              className="rounded border-brand-border text-brand-primary focus:ring-brand-primary"
+                              className="w-4 h-4 rounded border-brand-border text-brand-primary focus:ring-brand-primary"
                             />
-                            <div>
+                            <div className="min-w-0">
                               <span
-                                className={`font-bold ${
+                                className={`font-bold block truncate ${
                                   item.checked
                                     ? "line-through text-gray-400"
                                     : "text-brand-dark"
@@ -223,21 +234,16 @@ export default function SmartGroceryPlannerPage() {
                               >
                                 {item.name}
                               </span>
-                              <span className="text-gray-500 ml-2">
-                                ({item.quantity})
+                              <span className="text-[11px] text-gray-500">
+                                {item.quantity}
                               </span>
-                              {item.fromRecipeName && (
-                                <span className="block text-[10px] text-gray-400">
-                                  For: {item.fromRecipeName}
-                                </span>
-                              )}
                             </div>
                           </label>
 
                           <button
                             type="button"
                             onClick={() => removeGroceryItem(item.id)}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition"
+                            className="p-1 text-gray-400 hover:text-red-600"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -249,6 +255,35 @@ export default function SmartGroceryPlannerPage() {
               })}
             </div>
           )}
+        </section>
+
+        {/* Right: Already in Your Pantry */}
+        <section className="lg:col-span-4 bg-white rounded-3xl border border-brand-border p-6 shadow-sm space-y-4 self-start">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            <h2 className="text-base font-extrabold text-brand-dark">
+              Already in Your Pantry ({ingredients.length})
+            </h2>
+          </div>
+          <p className="text-xs text-gray-500">
+            These ingredients are already stocked in your kitchen and automatically subtracted from recipe shopping lists:
+          </p>
+          <div className="space-y-2">
+            {ingredients.map((ing) => (
+              <div
+                key={ing}
+                className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between text-xs"
+              >
+                <span className="font-bold text-emerald-950 flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  {ing}
+                </span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white text-emerald-800">
+                  {getIngredientCategory(ing)}
+                </span>
+              </div>
+            ))}
+          </div>
         </section>
       </div>
     </div>

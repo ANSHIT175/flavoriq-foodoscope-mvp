@@ -40,45 +40,69 @@ export default function RecipeCard({
     addIngredient,
   } = useFlavorIq();
 
-  const { recipe, scoreBreakdown, ingredientMatch, flavorCompatibility, explanations } =
-    item;
+  const {
+    recipe,
+    scoreBreakdown,
+    ingredientMatch,
+    flavorCompatibility,
+    explanations,
+  } = item;
   const saved = isRecipeSaved(recipe.id);
   const compared = isRecipeCompared(recipe.id);
 
-  const handleOpenNutrition = () => {
-    setSelectedNutritionRecipeId(recipe.id);
-    router.push("/nutrition");
+  const handleCompare = () => {
+    if (!compared) {
+      toggleCompareRecipe(recipe.id);
+    }
+    router.push("/compare");
   };
 
-  const handleOpenSubstitute = () => {
+  const handleNutrition = () => {
+    setSelectedNutritionRecipeId(recipe.id);
+    router.push(`/nutrition/${recipe.id}`);
+  };
+
+  const handleSubstitute = () => {
     const firstTarget =
       recipe.adaptations[0]?.targetIngredient?.toLowerCase() ||
       recipe.ingredients[0]?.canonicalName ||
       "paneer";
     setSelectedSubstitutionIngredient(firstTarget);
-    router.push("/substitutions");
+    router.push(`/substitutions/${recipe.id}`);
+  };
+
+  const handleAddToGrocery = () => {
+    addMissingIngredientsToGrocery(recipe);
+    router.push("/grocery");
+  };
+
+  const handleAddToMealPlan = () => {
+    quickAddToMealPlan(recipe.id);
+    router.push("/meal-planner");
   };
 
   return (
     <article className="bg-white rounded-2xl border border-brand-border shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col">
-      {/* Top Banner + Image */}
       <div className="grid grid-cols-1 md:grid-cols-12">
-        <div className="md:col-span-4 relative min-h-[200px] bg-brand-dark/10 overflow-hidden">
+        <div className="md:col-span-4 relative min-h-[210px] bg-brand-dark/10 overflow-hidden">
           <img
             src={recipe.image}
             alt={recipe.name}
-            className="w-full h-full object-cover min-h-[200px] hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover min-h-[210px] hover:scale-105 transition-transform duration-500"
             loading="lazy"
           />
           <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
             {rank !== undefined && (
               <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-brand-dark/90 text-brand-lime backdrop-blur-xs shadow">
-                #{rank} Top Match
+                #{rank} Match
               </span>
             )}
-            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 text-brand-dark shadow">
+            <Link
+              href={`/cuisines/${recipe.cuisine.toLowerCase()}`}
+              className="px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 hover:bg-brand-lime text-brand-dark shadow transition"
+            >
               {recipe.cuisine}
-            </span>
+            </Link>
           </div>
           <button
             type="button"
@@ -94,7 +118,6 @@ export default function RecipeCard({
           </button>
         </div>
 
-        {/* Right Header Info */}
         <div className="md:col-span-8 p-5 flex flex-col justify-between bg-gradient-to-br from-white to-brand-surface/40">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="space-y-1.5">
@@ -125,7 +148,6 @@ export default function RecipeCard({
                 {recipe.name}
               </Link>
 
-              {/* Diet & Taste Badges */}
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {recipe.dietaryTags.map((tag) => (
                   <span
@@ -146,7 +168,6 @@ export default function RecipeCard({
               </div>
             </div>
 
-            {/* Match Score Ring */}
             <div className="flex items-center gap-3 bg-white px-3.5 py-2.5 rounded-2xl border border-brand-border shadow-2xs self-start shrink-0">
               <ScoreRing score={scoreBreakdown.totalScore} size={58} />
               <div className="text-left">
@@ -163,16 +184,14 @@ export default function RecipeCard({
             </div>
           </div>
 
-          {/* Score Breakdown Bars */}
           <div className="mt-4 pt-3 border-t border-brand-border/60">
             <ScoreBreakdown breakdown={scoreBreakdown} />
           </div>
         </div>
       </div>
 
-      {/* Middle Intelligence Strip: Matched/Missing + FlavorDB Signal */}
-      <div className="px-5 py-4 bg-brand-surface/40 border-t border-brand-border/70 grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
-        <div className="lg:col-span-7 space-y-2">
+      <div className="px-5 py-3.5 bg-brand-surface/40 border-t border-brand-border/70 grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
+        <div className="lg:col-span-7 space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-bold text-brand-dark mr-1">
               Matched Core ({ingredientMatch.matchedCoreIngredients.length}):
@@ -202,19 +221,19 @@ export default function RecipeCard({
             ) : (
               <span className="text-emerald-700 font-semibold inline-flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                100% Core Ingredients Available in Pantry!
+                100% Core Ingredients Available!
               </span>
             )}
           </div>
         </div>
 
-        <div className="lg:col-span-5 bg-white rounded-xl p-3 border border-brand-border/80 flex items-start gap-2.5">
+        <div className="lg:col-span-5 bg-white rounded-xl p-2.5 border border-brand-border/80 flex items-start gap-2">
           <Beaker className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
           <div className="space-y-0.5">
             <span className="text-[11px] font-bold text-brand-dark block">
-              FlavorDB Molecular Intelligence
+              FlavorDB Molecular Signal
             </span>
-            <p className="text-[11px] text-gray-600 line-clamp-2 leading-relaxed">
+            <p className="text-[11px] text-gray-600 line-clamp-2">
               {flavorCompatibility.supportingSignals[0] ||
                 explanations.flavorCompatibilityText}
             </p>
@@ -222,79 +241,62 @@ export default function RecipeCard({
         </div>
       </div>
 
-      {/* Bottom Action Bar — All 6 Required Working Buttons + Grocery Helper */}
-      <div className="px-5 py-3.5 bg-white border-t border-brand-border flex flex-wrap items-center justify-between gap-2">
+      {/* Bottom Action Bar — Every Button Navigates to Its Dedicated Route */}
+      <div className="px-5 py-3 bg-white border-t border-brand-border flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/recipes/${recipe.id}`}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-dark hover:bg-brand-primary text-white text-xs font-bold transition shadow-2xs"
           >
             <Eye className="w-3.5 h-3.5 text-brand-lime" />
-            View Recipe
+            View Full Recipe
           </Link>
 
           <button
             type="button"
-            onClick={() => toggleCompareRecipe(recipe.id)}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition ${
-              compared
-                ? "bg-brand-primary text-white border-brand-primary"
-                : "bg-brand-surface hover:bg-brand-lime/50 text-brand-dark border-brand-border"
-            }`}
+            onClick={handleCompare}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border border-brand-border transition"
           >
-            <BarChart2 className="w-3.5 h-3.5" />
-            {compared ? "Comparing ✓" : "Compare"}
+            <BarChart2 className="w-3.5 h-3.5 text-brand-primary" />
+            Compare
           </button>
 
           <button
             type="button"
-            onClick={() => toggleSaveRecipe(recipe.id)}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition ${
-              saved
-                ? "bg-red-50 text-red-700 border-red-200"
-                : "bg-brand-surface hover:bg-brand-lime/50 text-brand-dark border-brand-border"
-            }`}
-          >
-            <Heart className={`w-3.5 h-3.5 ${saved ? "fill-current text-red-600" : ""}`} />
-            {saved ? "Saved" : "Save"}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleOpenSubstitute}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-surface hover:bg-brand-lime/50 text-brand-dark border border-brand-border transition"
-          >
-            <RefreshCw className="w-3.5 h-3.5 text-brand-primary" />
-            Substitute
-          </button>
-
-          <button
-            type="button"
-            onClick={handleOpenNutrition}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-surface hover:bg-brand-lime/50 text-brand-dark border border-brand-border transition"
+            onClick={handleNutrition}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border border-brand-border transition"
           >
             <Flame className="w-3.5 h-3.5 text-orange-600" />
             Nutrition
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSubstitute}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border border-brand-border transition"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-brand-primary" />
+            Substitute
           </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => addMissingIngredientsToGrocery(recipe)}
+            onClick={handleAddToGrocery}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition"
           >
             <ShoppingCart className="w-3.5 h-3.5" />
-            + Grocery
+            Add to Grocery
           </button>
 
           <button
             type="button"
-            onClick={() => quickAddToMealPlan(recipe.id)}
+            onClick={handleAddToMealPlan}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-brand-lime hover:bg-brand-primary hover:text-white text-brand-dark transition"
           >
             <Calendar className="w-3.5 h-3.5" />
-            Add to Meal Plan
+            Meal Plan
           </button>
         </div>
       </div>

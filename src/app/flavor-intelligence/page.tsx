@@ -1,72 +1,134 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Beaker, Sparkles, CheckCircle2, RefreshCw } from "lucide-react";
+import { Beaker, Sparkles, CheckCircle2, Layers } from "lucide-react";
 import { FLAVORDB_PAIRING_GRAPH } from "../../lib/foodoscope/mockCatalog";
 import { useFlavorIq } from "../../context/FlavorIqContext";
-import { normalizeIngredientName } from "../../lib/foodoscope/normalizers";
+import { getIngredientCategory, normalizeIngredientName } from "../../lib/foodoscope/normalizers";
 import FlavorPairingCard from "../../components/FlavorPairingCard";
 
 const NETWORK_NODES = [
-  { id: "tomato", label: "Tomato", x: 320, y: 70, color: "#DC2626" },
-  { id: "onion", label: "Onion", x: 490, y: 120, color: "#9333EA" },
-  { id: "garlic", label: "Garlic", x: 550, y: 260, color: "#D97706" },
-  { id: "ginger", label: "Ginger", x: 470, y: 390, color: "#CA8A04" },
-  { id: "tofu", label: "Tofu", x: 320, y: 430, color: "#0D9488" },
-  { id: "capsicum", label: "Capsicum", x: 170, y: 390, color: "#16A34A" },
-  { id: "paneer", label: "Paneer", x: 90, y: 260, color: "#2563EB" },
-  { id: "spinach", label: "Spinach", x: 150, y: 120, color: "#15803D" },
-  { id: "cumin", label: "Cumin", x: 320, y: 250, color: "#7C2D12" },
+  {
+    id: "tofu",
+    label: "Tofu",
+    x: 310,
+    y: 70,
+    color: "#10B981",
+    compounds: ["hexanal", "1-octen-3-ol", "maltol", "benzaldehyde"],
+    notes: "Clean soy protein curd with subtle grassy hexanal and nutty maltol notes that absorb pungent aromatics.",
+  },
+  {
+    id: "ginger",
+    label: "Ginger",
+    x: 500,
+    y: 130,
+    color: "#F59E0B",
+    compounds: ["zingiberene", "citral", "geranial", "citronellol"],
+    notes: "Warm, citrusy sesquiterpene hydrocarbons (zingiberene) that cut through rich lipids and soy proteins.",
+  },
+  {
+    id: "garlic",
+    label: "Garlic",
+    x: 540,
+    y: 290,
+    color: "#EAB308",
+    compounds: ["diallyl disulfide", "allyl methyl sulfide", "allicin"],
+    notes: "Pungent organosulfur compounds that caramelize into deep savory umami bases when sautéed.",
+  },
+  {
+    id: "capsicum",
+    label: "Capsicum",
+    x: 420,
+    y: 410,
+    color: "#22C55E",
+    compounds: ["2-isobutyl-3-methoxypyrazine", "linalool", "hexanal"],
+    notes: "Crisp vegetal methoxypyrazines and floral linalool that add bright aromatic lift to woks and kadai gravies.",
+  },
+  {
+    id: "onion",
+    label: "Onion",
+    x: 210,
+    y: 410,
+    color: "#A855F7",
+    compounds: ["dipropyl disulfide", "3-methylbutanal", "phenylacetaldehyde"],
+    notes: "Sulfurous thiosulfinates that transform into sweet Maillard aldehydes upon browning.",
+  },
+  {
+    id: "tomato",
+    label: "Tomato",
+    x: 90,
+    y: 290,
+    color: "#EF4444",
+    compounds: ["hexanal", "furaneol", "geranylacetone", "2-methylbutanal"],
+    notes: "Glutamate-rich acidic fruit volatiles that bridge dairy lactones, alliums, and toasted spices.",
+  },
+  {
+    id: "paneer",
+    label: "Paneer",
+    x: 130,
+    y: 130,
+    color: "#3B82F6",
+    compounds: ["delta-decalactone", "acetoin", "butanoic acid", "hexanal"],
+    notes: "Milky sweet lactones that mellow spicy capsaicin and acidic tomato gravies.",
+  },
+  {
+    id: "spinach",
+    label: "Spinach",
+    x: 310,
+    y: 250,
+    color: "#16A34A",
+    compounds: ["(Z)-3-hexenol", "hexanal", "2-ethylfuran"],
+    notes: "Fresh green-leaf alcohols and mineral volatiles that pair with lactones and starchy tubers.",
+  },
 ];
 
-const FEATURED_PAIRS = [
-  { a: "tofu", b: "capsicum", label: "Tofu + Capsicum" },
-  { a: "tofu", b: "ginger", label: "Tofu + Ginger" },
-  { a: "tomato", b: "garlic", label: "Garlic + Tomato" },
-  { a: "paneer", b: "spinach", label: "Paneer + Spinach" },
-  { a: "tomato", b: "onion", label: "Tomato + Onion" },
-  { a: "dal", b: "cumin", label: "Dal + Cumin" },
-];
-
-export default function FlavorIntelligencePage() {
-  const { ingredients, addIngredient, showToast } = useFlavorIq();
-  const [selectedNode, setSelectedNode] = useState<string>("tomato");
-  const [ingA, setIngA] = useState<string>("tofu");
-  const [ingB, setIngB] = useState<string>("ginger");
+export default function FlavorIntelligenceLabPage() {
+  const { ingredients, addIngredient } = useFlavorIq();
+  const [selectedNodeId, setSelectedNodeId] = useState<string>("tofu");
 
   const allPairs = useMemo(() => Object.values(FLAVORDB_PAIRING_GRAPH), []);
 
+  const activeNode = useMemo(
+    () =>
+      NETWORK_NODES.find((n) => n.id === selectedNodeId) || NETWORK_NODES[0],
+    [selectedNodeId]
+  );
+
+  const connectedPairs = useMemo(
+    () =>
+      allPairs.filter(
+        (p) =>
+          p.ingredientA === activeNode.id || p.ingredientB === activeNode.id
+      ),
+    [allPairs, activeNode]
+  );
+
+  const compatibleIngredients = useMemo(
+    () =>
+      connectedPairs.map((p) => ({
+        name:
+          p.ingredientA === activeNode.id ? p.ingredientB : p.ingredientA,
+        molecules: p.sharedMoleculeCount,
+        strength:
+          p.pairingStrength || Math.min(96, 65 + p.sharedMoleculeCount * 1.5),
+      })),
+    [connectedPairs, activeNode]
+  );
+
+  const avgPairingStrength = useMemo(() => {
+    if (compatibleIngredients.length === 0) return 88;
+    return Math.round(
+      compatibleIngredients.reduce((a, b) => a + b.strength, 0) /
+        compatibleIngredients.length
+    );
+  }, [compatibleIngredients]);
+
   const networkEdges = useMemo(() => {
-    const nodeIds = new Set(NETWORK_NODES.map((n) => n.id));
+    const nodeSet = new Set(NETWORK_NODES.map((n) => n.id));
     return allPairs.filter(
-      (p) => nodeIds.has(p.ingredientA) && nodeIds.has(p.ingredientB)
+      (p) => nodeSet.has(p.ingredientA) && nodeSet.has(p.ingredientB)
     );
   }, [allPairs]);
-
-  const activePair = useMemo(() => {
-    const k1 = `${ingA}|${ingB}`;
-    const k2 = `${ingB}|${ingA}`;
-    return (
-      FLAVORDB_PAIRING_GRAPH[k1] ||
-      FLAVORDB_PAIRING_GRAPH[k2] || {
-        ingredientA: ingA,
-        ingredientB: ingB,
-        sharedMoleculeCount: 8,
-        sharedCompounds: ["hexanal", "linalool"],
-        flavorProfile: "Complementary Culinary Bridge",
-        pairingStrength: 74,
-        sensoryNote: `${ingA} and ${ingB} share baseline green-aldehyde and terpene volatiles that balance savory dishes.`,
-        source: "FlavorDB" as const,
-      }
-    );
-  }, [ingA, ingB]);
-
-  const filteredPairs = useMemo(() => {
-    if (!selectedNode || selectedNode === "all") return allPairs;
-    return allPairs.filter(
-      (p) => p.ingredientA === selectedNode || p.ingredientB === selectedNode
-    );
-  }, [allPairs, selectedNode]);
 
   const userCanons = useMemo(
     () => new Set(ingredients.map(normalizeIngredientName)),
@@ -75,51 +137,62 @@ export default function FlavorIntelligencePage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <section className="bg-gradient-to-r from-brand-dark to-brand-primary text-white rounded-3xl p-6 sm:p-8 shadow-md">
-        <div className="max-w-3xl space-y-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-brand-lime text-xs font-bold">
+      {/* Dark Scientific Header */}
+      <section className="rounded-3xl bg-[#0E2414] text-white p-6 sm:p-8 shadow-xl border border-emerald-500/30 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="space-y-2 max-w-2xl">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-brand-lime text-xs font-extrabold border border-emerald-400/30">
             <Beaker className="w-3.5 h-3.5" />
-            FlavorDB Molecular Pairing Graph
+            FlavorDB Molecular Graph Visualization
           </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold">
-            Flavor Intelligence — Understand WHY Ingredients Work Together.
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            Flavor Intelligence — Understand WHY Ingredients Work Together
           </h1>
-          <p className="text-xs sm:text-sm text-brand-lime/90 leading-relaxed">
-            FLAVORIQ evaluates shared volatile aroma compounds, functional groups, and FEMA sensory descriptors across ingredient pairs to compute the 25-point Flavor Compatibility score.
+          <p className="text-xs sm:text-sm text-brand-lime/85 leading-relaxed">
+            Click any ingredient node in the molecular network below (e.g., Tofu → Ginger → Garlic → Capsicum → Onion) to inspect its volatile aroma compounds, pairing strength, and compatible partners in the side panel.
           </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2 shrink-0">
+          {["tofu", "ginger", "garlic", "capsicum", "onion", "tomato", "paneer", "spinach"].map(
+            (id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSelectedNodeId(id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold capitalize border transition ${
+                  selectedNodeId === id
+                    ? "bg-brand-lime text-brand-dark border-brand-lime"
+                    : "bg-white/10 text-white border-white/15 hover:bg-white/20"
+                }`}
+              >
+                {id}
+              </button>
+            )
+          )}
         </div>
       </section>
 
-      {/* Interactive Network Graph + Pairwise Molecular Inspector */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: SVG Interactive Flavor Pairing Network */}
-        <section className="lg:col-span-7 bg-white rounded-2xl border border-brand-border p-5 sm:p-6 shadow-sm space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* MAIN TECHNICAL WORKSPACE: Left Interactive Graph + Right Node Side Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        {/* Interactive Flavor Network Canvas */}
+        <section className="lg:col-span-7 bg-[#112A18] text-white rounded-3xl border border-emerald-500/30 p-5 shadow-lg flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div>
-              <h2 className="text-base font-extrabold text-brand-dark">
-                Interactive Flavor Pairing Network
+              <span className="text-[11px] font-bold uppercase tracking-wider text-brand-lime">
+                Interactive Molecular Pairing Topology
+              </span>
+              <h2 className="text-base font-extrabold text-white">
+                Click Any Node to Inspect Chemical Bridges
               </h2>
-              <p className="text-xs text-gray-500">
-                Click any ingredient node to highlight its molecular compound bridges
-              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setSelectedNode("all")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                selectedNode === "all"
-                  ? "bg-brand-dark text-brand-lime border-brand-dark"
-                  : "bg-brand-surface text-brand-dark border-brand-border"
-              }`}
-            >
-              Show All 26 Bridges
-            </button>
+            <span className="text-xs font-mono text-brand-lime bg-white/10 px-2.5 py-1 rounded-lg">
+              Active Node: {activeNode.label.toUpperCase()}
+            </span>
           </div>
 
-          <div className="bg-brand-surface/50 rounded-2xl border border-brand-border p-2 overflow-hidden">
+          <div className="rounded-2xl bg-[#0B1D10] border border-emerald-500/20 p-2 overflow-hidden">
             <svg
-              viewBox="0 0 640 500"
+              viewBox="0 0 640 480"
               className="w-full h-auto max-h-[420px] select-none"
             >
               {/* Edges */}
@@ -127,50 +200,38 @@ export default function FlavorIntelligencePage() {
                 const nA = NETWORK_NODES.find((n) => n.id === edge.ingredientA);
                 const nB = NETWORK_NODES.find((n) => n.id === edge.ingredientB);
                 if (!nA || !nB) return null;
-                const isHighlighted =
-                  selectedNode === "all" ||
-                  edge.ingredientA === selectedNode ||
-                  edge.ingredientB === selectedNode;
+                const active =
+                  edge.ingredientA === activeNode.id ||
+                  edge.ingredientB === activeNode.id;
                 const midX = (nA.x + nB.x) / 2;
                 const midY = (nA.y + nB.y) / 2;
 
                 return (
-                  <g
-                    key={`${edge.ingredientA}-${edge.ingredientB}`}
-                    onClick={() => {
-                      setIngA(edge.ingredientA);
-                      setIngB(edge.ingredientB);
-                    }}
-                    className="cursor-pointer"
-                  >
+                  <g key={`${edge.ingredientA}-${edge.ingredientB}`}>
                     <line
                       x1={nA.x}
                       y1={nA.y}
                       x2={nB.x}
                       y2={nB.y}
-                      stroke={isHighlighted ? "#2E7D32" : "#CBD5E1"}
-                      strokeWidth={
-                        isHighlighted
-                          ? Math.max(2, Math.min(6, edge.sharedMoleculeCount / 4))
-                          : 1.5
-                      }
-                      strokeOpacity={isHighlighted ? 0.85 : 0.35}
+                      stroke={active ? "#D8F0C2" : "#2E7D32"}
+                      strokeWidth={active ? 3.5 : 1.5}
+                      strokeOpacity={active ? 0.95 : 0.35}
                     />
-                    {isHighlighted && (
+                    {active && (
                       <g>
                         <rect
-                          x={midX - 22}
+                          x={midX - 24}
                           y={midY - 10}
-                          width={44}
+                          width={48}
                           height={20}
                           rx={6}
-                          fill="#14331B"
+                          fill="#D8F0C2"
                         />
                         <text
                           x={midX}
                           y={midY + 4}
                           textAnchor="middle"
-                          fill="#D8F0C2"
+                          fill="#14331B"
                           fontSize="10"
                           fontWeight="bold"
                         >
@@ -184,217 +245,165 @@ export default function FlavorIntelligencePage() {
 
               {/* Nodes */}
               {NETWORK_NODES.map((node) => {
-                const isSelected = selectedNode === node.id;
-                const inPantry = userCanons.has(node.id);
+                const isSelected = node.id === activeNode.id;
+                const isConnected = compatibleIngredients.some(
+                  (c) => c.name === node.id
+                );
                 return (
                   <g
                     key={node.id}
-                    onClick={() => {
-                      setSelectedNode(node.id);
-                      setIngA(node.id);
-                    }}
+                    onClick={() => setSelectedNodeId(node.id)}
                     className="cursor-pointer"
                   >
                     <circle
                       cx={node.x}
                       cy={node.y}
-                      r={isSelected ? 34 : 28}
-                      fill={isSelected ? "#14331B" : "#FFFFFF"}
+                      r={isSelected ? 36 : isConnected ? 30 : 25}
+                      fill={isSelected ? "#D8F0C2" : "#14331B"}
                       stroke={node.color}
-                      strokeWidth={isSelected ? 5 : 3.5}
+                      strokeWidth={isSelected ? 5 : 3}
                     />
                     <text
                       x={node.x}
                       y={node.y + 4}
                       textAnchor="middle"
-                      fill={isSelected ? "#D8F0C2" : "#14331B"}
+                      fill={isSelected ? "#14331B" : "#FFFFFF"}
                       fontSize="12"
                       fontWeight="bold"
                     >
                       {node.label}
                     </text>
-                    {inPantry && (
-                      <circle
-                        cx={node.x + 20}
-                        cy={node.y - 20}
-                        r={7}
-                        fill="#2E7D32"
-                        stroke="#FFFFFF"
-                        strokeWidth={2}
-                      />
-                    )}
                   </g>
                 );
               })}
             </svg>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
+          <div className="flex flex-wrap items-center justify-between text-[11px] text-brand-lime/80 pt-3">
             <span>
-              ● Green badge on node = Currently in your active kitchen pantry
+              Chain Example: Tofu → Ginger → Garlic → Capsicum → Onion → Tomato
             </span>
-            <span>Click any edge label to inspect its shared molecules</span>
+            <span>Edge labels show shared FlavorDB aroma molecule count</span>
           </div>
         </section>
 
-        {/* Right: Interactive Pairwise Compound Inspector */}
-        <section className="lg:col-span-5 bg-white rounded-2xl border border-brand-border p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-5">
+        {/* Right Node Inspector Side Panel */}
+        <aside className="lg:col-span-5 bg-white rounded-3xl border border-brand-border p-6 shadow-md flex flex-col justify-between space-y-5">
           <div className="space-y-4">
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-brand-primary">
-                Pairwise Compound Lab
-              </span>
-              <h2 className="text-base font-extrabold text-brand-dark mt-0.5">
-                Inspect Any Ingredient Pairing
-              </h2>
+            <div className="flex items-start justify-between border-b border-brand-border pb-4">
+              <div>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-brand-primary">
+                  Selected Node Inspector
+                </span>
+                <h2 className="text-2xl font-extrabold text-brand-dark capitalize mt-0.5">
+                  {activeNode.label}
+                </h2>
+                <span className="text-xs font-semibold text-gray-500">
+                  Category: {getIngredientCategory(activeNode.id)}
+                </span>
+              </div>
+
+              <div className="text-right bg-brand-surface px-3.5 py-2 rounded-2xl border border-brand-border">
+                <span className="text-xl font-extrabold text-brand-primary block leading-none">
+                  {avgPairingStrength}%
+                </span>
+                <span className="text-[10px] font-bold text-gray-500">
+                  Avg Pairing Strength
+                </span>
+              </div>
             </div>
 
-            {/* Quick Featured Pair Pills */}
-            <div className="flex flex-wrap gap-1.5">
-              {FEATURED_PAIRS.map((fp) => {
-                const active =
-                  (ingA === fp.a && ingB === fp.b) ||
-                  (ingA === fp.b && ingB === fp.a);
-                return (
+            {/* Flavor Compounds */}
+            <div>
+              <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block mb-2">
+                Primary Volatile Flavor Compounds
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {activeNode.compounds.map((comp) => (
+                  <span
+                    key={comp}
+                    className="px-2.5 py-1 rounded-lg bg-brand-surface border border-brand-border text-xs font-mono font-bold text-brand-dark"
+                  >
+                    {comp}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Flavor Notes */}
+            <div className="p-3.5 rounded-2xl bg-brand-surface/60 border border-brand-border space-y-1">
+              <span className="text-xs font-extrabold text-brand-primary flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                Sensory &amp; Olfactory Profile
+              </span>
+              <p className="text-xs text-gray-700 leading-relaxed">
+                {activeNode.notes}
+              </p>
+            </div>
+
+            {/* Compatible Ingredients */}
+            <div>
+              <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500 block mb-2">
+                Compatible Ingredients (Click to Switch Node)
+              </span>
+              <div className="space-y-2">
+                {compatibleIngredients.map((comp) => (
                   <button
-                    key={fp.label}
+                    key={comp.name}
                     type="button"
                     onClick={() => {
-                      setIngA(fp.a);
-                      setIngB(fp.b);
-                      setSelectedNode(fp.a);
+                      const existsInGraph = NETWORK_NODES.some(
+                        (n) => n.id === comp.name
+                      );
+                      if (existsInGraph) setSelectedNodeId(comp.name);
                     }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
-                      active
-                        ? "bg-brand-primary text-white border-brand-primary"
-                        : "bg-brand-surface text-brand-dark border-brand-border hover:bg-brand-lime/50"
-                    }`}
+                    className="w-full p-2.5 rounded-xl border border-brand-border bg-brand-surface/30 hover:bg-brand-lime/50 flex items-center justify-between text-xs transition"
                   >
-                    {fp.label}
+                    <span className="font-bold text-brand-dark capitalize">
+                      {activeNode.label} + {comp.name}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[11px] text-gray-600">
+                        {comp.molecules} shared molecules
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-brand-dark text-brand-lime">
+                        {Math.round(comp.strength)}%
+                      </span>
+                    </div>
                   </button>
-                );
-              })}
-            </div>
-
-            {/* Dropdown Selectors */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-gray-600 mb-1">
-                  Ingredient A
-                </label>
-                <select
-                  value={ingA}
-                  onChange={(e) => {
-                    setIngA(e.target.value);
-                    setSelectedNode(e.target.value);
-                  }}
-                  className="w-full rounded-xl border border-brand-border px-3 py-2 text-xs font-bold capitalize bg-brand-surface/40"
-                >
-                  {[
-                    "tofu",
-                    "paneer",
-                    "tomato",
-                    "onion",
-                    "garlic",
-                    "ginger",
-                    "capsicum",
-                    "spinach",
-                    "potato",
-                    "dal",
-                    "chickpeas",
-                    "pasta",
-                    "mushroom",
-                    "black beans",
-                    "rice",
-                    "coconut milk",
-                    "noodles",
-                  ].map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-gray-600 mb-1">
-                  Ingredient B
-                </label>
-                <select
-                  value={ingB}
-                  onChange={(e) => setIngB(e.target.value)}
-                  className="w-full rounded-xl border border-brand-border px-3 py-2 text-xs font-bold capitalize bg-brand-surface/40"
-                >
-                  {[
-                    "ginger",
-                    "capsicum",
-                    "garlic",
-                    "tomato",
-                    "onion",
-                    "spinach",
-                    "cumin",
-                    "paneer",
-                    "tofu",
-                    "sesame",
-                  ].map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
+                ))}
               </div>
             </div>
-
-            {/* Active Pair Card */}
-            <FlavorPairingCard pair={activePair} />
           </div>
 
           <button
             type="button"
-            onClick={() => {
-              addIngredient(ingA.charAt(0).toUpperCase() + ingA.slice(1));
-              addIngredient(ingB.charAt(0).toUpperCase() + ingB.slice(1));
-              showToast(
-                "Pair Added to Pantry",
-                `Added ${ingA} and ${ingB} to your active cooking context.`
-              );
-            }}
-            className="w-full py-2.5 px-4 rounded-xl bg-brand-dark hover:bg-brand-primary text-white text-xs font-bold transition flex items-center justify-center gap-2"
+            onClick={() => addIngredient(activeNode.label)}
+            disabled={userCanons.has(activeNode.id)}
+            className="w-full py-3 px-4 rounded-xl bg-brand-primary hover:bg-brand-dark disabled:bg-emerald-100 disabled:text-emerald-800 text-white text-xs font-extrabold transition flex items-center justify-center gap-2"
           >
-            <CheckCircle2 className="w-4 h-4 text-brand-lime" />
-            Add Both Ingredients to My Kitchen Pantry
+            <CheckCircle2 className="w-4 h-4" />
+            {userCanons.has(activeNode.id)
+              ? `${activeNode.label} is in Your Active Pantry ✓`
+              : `Add ${activeNode.label} to Kitchen Pantry`}
           </button>
-        </section>
+        </aside>
       </div>
 
-      {/* Filtered Pairing Cards Grid */}
+      {/* Molecular Pairing Cards */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-extrabold text-brand-dark capitalize">
-            {selectedNode === "all"
-              ? `All Indexed FlavorDB Molecular Bridges (${filteredPairs.length})`
-              : `Molecular Bridges Connected to ${selectedNode} (${filteredPairs.length})`}
+          <h2 className="text-lg font-extrabold text-brand-dark flex items-center gap-2">
+            <Layers className="w-5 h-5 text-brand-primary" />
+            Molecular Pairing Cards for {activeNode.label} ({connectedPairs.length})
           </h2>
-          {selectedNode !== "all" && (
-            <button
-              type="button"
-              onClick={() => setSelectedNode("all")}
-              className="text-xs font-bold text-brand-primary hover:underline flex items-center gap-1"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> Show All Pairs
-            </button>
-          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPairs.map((pair) => (
+          {connectedPairs.map((pair) => (
             <FlavorPairingCard
               key={`${pair.ingredientA}-${pair.ingredientB}`}
               pair={pair}
-              onSelectPair={(a, b) => {
-                setIngA(a);
-                setIngB(b);
-              }}
             />
           ))}
         </div>
