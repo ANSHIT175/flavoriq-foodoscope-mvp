@@ -492,7 +492,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Garnish with ginger juliennes and fresh coriander leaves.",
     ],
     image: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: SMART_SUBSTITUTIONS_CATALOG.paneer,
     nutritionTips: [
       "Swap half the paneer with firm tofu or roasted mushrooms to reduce saturated fat by 35%.",
@@ -534,7 +534,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Finish with a sizzling tempering (tadka) of sliced golden garlic over the top.",
     ],
     image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: SMART_SUBSTITUTIONS_CATALOG.paneer,
     nutritionTips: [
       "Add 2 tbsp roasted chickpea flour (besan) to thicken the spinach gravy naturally without heavy cream.",
@@ -576,7 +576,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Pour the aromatic tempering over the simmering dal and top with fresh coriander.",
     ],
     image: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: SMART_SUBSTITUTIONS_CATALOG.rice,
     nutritionTips: [
       "Fold 1 cup baby spinach directly into the hot dal to add iron, folate, and 3g extra fiber.",
@@ -616,7 +616,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Finish with lemon juice and fresh coriander.",
     ],
     image: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: SMART_SUBSTITUTIONS_CATALOG.spinach,
     nutritionTips: [
       "Toss in 1/2 cup boiled chickpeas or cubed tofu to boost protein from 7g to 16g.",
@@ -656,7 +656,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Top with ginger juliennes and fresh coriander.",
     ],
     image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: [],
     nutritionTips: [
       "Pair with a side of wilted spinach or cucumber salad instead of fried bhatura to keep calories under 320 kcal.",
@@ -695,7 +695,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Toss pasta and baby spinach directly into the sauce with a splash of pasta water.",
     ],
     image: "https://images.unsplash.com/photo-1621996346565-e3d5d6281298?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: SMART_SUBSTITUTIONS_CATALOG.pasta,
     nutritionTips: [
       "Switch to chickpea penne to raise protein from 14g to 23g and make the dish Gluten-Free.",
@@ -732,7 +732,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Fold in cooked rice and baby spinach until the greens wilt and absorb the pan juices.",
     ],
     image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: SMART_SUBSTITUTIONS_CATALOG.rice,
     nutritionTips: [
       "Add 100g seared tofu or edamame to transform this skillet into a 20g High-Protein meal.",
@@ -770,7 +770,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Toss in sliced capsicum and onion so they stay crisp-tender, then glaze with soy-vinegar reduction.",
     ],
     image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: SMART_SUBSTITUTIONS_CATALOG.tofu,
     nutritionTips: [
       "Air-fry or dry-sear the tofu cubes before wok-tossing to keep total fat under 9g.",
@@ -810,7 +810,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Serve over warm rice and top with fresh coriander (cilantro).",
     ],
     image: "https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: SMART_SUBSTITUTIONS_CATALOG.rice,
     nutritionTips: [
       "Top with diced avocado or pumpkin seeds for heart-healthy monounsaturated fats.",
@@ -850,7 +850,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Fold in spinach and fresh basil right before serving.",
     ],
     image: "https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: SMART_SUBSTITUTIONS_CATALOG.tofu,
     nutritionTips: [
       "Use light culinary coconut milk to save 110 kcal while retaining delta-octalactone aroma.",
@@ -889,7 +889,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Arrange over warm steamed rice with blanched spinach and toasted sesame seeds.",
     ],
     image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: SMART_SUBSTITUTIONS_CATALOG.tofu,
     nutritionTips: [
       "Add 1/2 cup steamed edamame pods to boost plant protein to 25g per bowl.",
@@ -928,7 +928,7 @@ export const DEVELOPMENT_RECIPES: NormalizedRecipe[] = [
       "Fold in baby spinach and finish with bright lemon juice and herbs.",
     ],
     image: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
-    sourceUrl: "https://cosylab.iiitd.edu.in/recipedb/",
+    sourceUrl: "/recipes",
     adaptations: SMART_SUBSTITUTIONS_CATALOG.spinach,
     nutritionTips: [
       "Drizzle 1 tsp tahini or crumble 30g feta/paneer on top for extra calcium and creaminess.",

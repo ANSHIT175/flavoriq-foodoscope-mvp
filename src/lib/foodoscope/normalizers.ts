@@ -222,7 +222,7 @@ export function mapRawRecipeDbRecord(
       ? raw.instructions.map(String)
       : ["Prepare and chop ingredients.", "Cook over medium heat and season to taste."],
     image: String(raw?.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80"),
-    sourceUrl: String(raw?.sourceUrl || "https://cosylab.iiitd.edu.in/recipedb/"),
+    sourceUrl: String(raw?.sourceUrl || "/recipes"),
     adaptations: Array.isArray(raw?.adaptations) ? raw.adaptations : [],
   };
 }

@@ -127,17 +127,26 @@ export async function scoreAndRankRecipes(
     // 1. Ingredient Coverage (0 - 30)
     const coreRatio =
       coreIngredients.length > 0 ? matchedCore.length / coreIngredients.length : 0;
+    const secondaryRatio =
+      secondaryIngredients.length > 0
+        ? matchedSecondary.length / secondaryIngredients.length
+        : 0;
     const userUtilizationRatio =
       userCanonical.length > 0 ? userUsedCount / userCanonical.length : 0;
     const rawIngScore =
-      (coreRatio * 0.75 + userUtilizationRatio * 0.25) * SCORING_WEIGHTS.ingredientCoverage;
+      (coreRatio * 0.7 + secondaryRatio * 0.1 + userUtilizationRatio * 0.2) *
+      SCORING_WEIGHTS.ingredientCoverage;
     const ingredientCoverage: number = Math.round(rawIngScore);
 
     // 2. Flavor Compatibility (0 - 25) via FlavorDB
-    const activeRecipeIngredients = [
-      ...matchedCore.map(normalizeIngredientName),
-      ...coreIngredients.slice(0, 3).map((i) => i.canonicalName),
-    ];
+    // Combine user's matched ingredients with recipe's core ingredients so pantry edits change FlavorDB score
+    const activeRecipeIngredients = Array.from(
+      new Set([
+        ...matchedCore.map(normalizeIngredientName),
+        ...matchedSecondary.map(normalizeIngredientName),
+        ...coreIngredients.slice(0, 2).map((i) => i.canonicalName),
+      ])
+    );
     const flavorResult = await getFlavorCompatibility(
       activeRecipeIngredients,
       SCORING_WEIGHTS.flavorCompatibility
@@ -149,7 +158,7 @@ export async function scoreAndRankRecipes(
     if (context.cuisine === "Any" || recipe.cuisine === context.cuisine) {
       cuisineFit = SCORING_WEIGHTS.cuisineFit;
     } else {
-      cuisineFit = 3;
+      cuisineFit = 0;
     }
 
     // 4. Taste Fit (0 - 10)
@@ -157,7 +166,7 @@ export async function scoreAndRankRecipes(
     if (context.taste === "Any" || recipe.tasteProfile.includes(context.taste)) {
       tasteFit = SCORING_WEIGHTS.tasteFit;
     } else {
-      tasteFit = 3;
+      tasteFit = 2;
     }
 
     // 5. Cooking Time Fit (0 - 10)
@@ -169,7 +178,7 @@ export async function scoreAndRankRecipes(
         timeFit = buffer >= 10 ? 10 : buffer >= 5 ? 9 : 8;
       } else {
         const over = recipe.cookingTimeMinutes - maxMinutes;
-        timeFit = Math.max(0, 5 - Math.ceil(over / 5));
+        timeFit = Math.max(0, 3 - Math.ceil(over / 5));
       }
     }
 
@@ -247,24 +256,53 @@ export async function scoreAndRankRecipes(
     });
   }
 
-  return results
-    .filter((r) => {
-      if (
-        context.dietaryPreference !== "No preference" &&
-        !r.recipe.dietaryTags.includes(context.dietaryPreference)
-      ) {
-        return false;
-      }
-      if (!matchesCalorieRange(r.recipe.nutrition.calories, context.calorieRange)) {
-        return false;
-      }
-      if (!matchesProteinLevel(r.recipe.nutrition.proteinG, context.proteinLevel)) {
-        return false;
-      }
-      if (!context.allowAdditionalIngredients && r.ingredientMatch.matchedCoreIngredients.length === 0) {
-        return false;
-      }
-      return true;
-    })
-    .sort((a, b) => b.scoreBreakdown.totalScore - a.scoreBreakdown.totalScore);
+  const maxMinutes = parseMaxTimeMinutes(context.maxCookingTime);
+
+  const strictFiltered = results.filter((r) => {
+    if (
+      context.dietaryPreference !== "No preference" &&
+      !r.recipe.dietaryTags.includes(context.dietaryPreference)
+    ) {
+      return false;
+    }
+    if (!matchesCalorieRange(r.recipe.nutrition.calories, context.calorieRange)) {
+      return false;
+    }
+    if (!matchesProteinLevel(r.recipe.nutrition.proteinG, context.proteinLevel)) {
+      return false;
+    }
+    if (
+      !context.allowAdditionalIngredients &&
+      r.ingredientMatch.matchedCoreIngredients.length === 0
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  // Sort by:
+  // 1) If a specific cuisine is selected, prioritize recipes of that cuisine
+  // 2) If a max cooking time is selected, prioritize recipes within that time limit
+  // 3) Total 100-point score descending
+  const sortFn = (a: RankedRecipeResult, b: RankedRecipeResult) => {
+    if (context.cuisine !== "Any") {
+      const aCuisineMatch = a.recipe.cuisine === context.cuisine ? 1 : 0;
+      const bCuisineMatch = b.recipe.cuisine === context.cuisine ? 1 : 0;
+      if (aCuisineMatch !== bCuisineMatch) return bCuisineMatch - aCuisineMatch;
+    }
+    if (maxMinutes !== null) {
+      const aTimeOk = a.recipe.cookingTimeMinutes <= maxMinutes ? 1 : 0;
+      const bTimeOk = b.recipe.cookingTimeMinutes <= maxMinutes ? 1 : 0;
+      if (aTimeOk !== bTimeOk) return bTimeOk - aTimeOk;
+    }
+    if (b.scoreBreakdown.totalScore !== a.scoreBreakdown.totalScore) {
+      return b.scoreBreakdown.totalScore - a.scoreBreakdown.totalScore;
+    }
+    return (
+      b.ingredientMatch.recipeCoreMatchedCount -
+      a.ingredientMatch.recipeCoreMatchedCount
+    );
+  };
+
+  return strictFiltered.sort(sortFn);
 }

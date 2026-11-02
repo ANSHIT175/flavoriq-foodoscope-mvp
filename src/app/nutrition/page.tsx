@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -9,7 +9,6 @@ import {
   Sparkles,
   CheckCircle2,
   ArrowLeft,
-  Utensils,
 } from "lucide-react";
 import { useFlavorIq } from "../../context/FlavorIqContext";
 import { ScoreRing } from "../../components/ScoreBreakdown";
@@ -25,7 +24,13 @@ export default function NutritionAnalyticsDashboardPage() {
     showToast,
   } = useFlavorIq();
 
-  const activeId = routeId || selectedNutritionRecipeId || allRecipes[0].id;
+  useEffect(() => {
+    if (routeId && allRecipes.some((r) => r.id === routeId)) {
+      setSelectedNutritionRecipeId(routeId);
+    }
+  }, [routeId, allRecipes, setSelectedNutritionRecipeId]);
+
+  const activeId = selectedNutritionRecipeId || routeId || allRecipes[0].id;
   const recipe =
     allRecipes.find((r) => r.id === activeId) || allRecipes[0];
 
@@ -45,7 +50,6 @@ export default function NutritionAnalyticsDashboardPage() {
     : recipe.nutrition.fatG;
   const fiberG = (recipe.nutrition.fiberG || 6) + (optimized ? 3 : 0);
 
-  // Macro calorie distribution for Donut Chart
   const protKcal = proteinG * 4;
   const carbKcal = carbsG * 4;
   const fatKcal = fatG * 9;
@@ -68,28 +72,40 @@ export default function NutritionAnalyticsDashboardPage() {
     "Dairy-free",
   ] as const;
 
+  const optimizationSteps =
+    recipe.nutritionTips && recipe.nutritionTips.length > 0
+      ? recipe.nutritionTips
+      : [
+          "Fortify with 100g cubed Firm Tofu or roasted chickpeas (+6g complete protein).",
+          "Switch to high-heat non-stick sear with 1 tsp cold-pressed oil (-30% lipid calories).",
+          "Fold in 1 cup leafy greens or whole grain base (+3g prebiotic dietary fiber).",
+        ];
+
   return (
     <div className="space-y-8">
       {/* Top Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href={`/recipes/${recipe.id}`}
-          className="inline-flex items-center gap-2 text-xs font-extrabold text-brand-primary hover:text-brand-dark"
+          className="inline-flex items-center gap-2 text-xs font-extrabold text-brand-primary hover:text-brand-dark cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to {recipe.name}
         </Link>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-gray-500">Switch Dish:</span>
+          <span className="text-xs font-bold text-gray-500">Select Recipe:</span>
           <select
             value={recipe.id}
-            onChange={(e) => setSelectedNutritionRecipeId(e.target.value)}
-            className="rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs font-bold text-brand-dark"
+            onChange={(e) => {
+              setSelectedNutritionRecipeId(e.target.value);
+              setOptimized(false);
+            }}
+            className="rounded-xl border border-brand-border bg-white px-3.5 py-2 text-xs font-extrabold text-brand-dark cursor-pointer shadow-2xs"
           >
             {allRecipes.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.name} ({r.nutrition.calories} kcal)
+                {r.name} ({r.nutrition.calories} kcal • {r.nutrition.proteinG}g Protein)
               </option>
             ))}
           </select>
@@ -117,22 +133,48 @@ export default function NutritionAnalyticsDashboardPage() {
             const next = !optimized;
             setOptimized(next);
             showToast(
-              next ? "Nutrition Optimized!" : "Baseline Restored",
+              next ? "Macro Profile Optimized!" : "Baseline Macros Restored",
               next
-                ? `Applied High-Protein (+6g) & Low-Oil (-30% fat) swap to ${recipe.name}.`
+                ? `Applied lower-calorie (${cal} kcal) & high-protein (${proteinG}g) modifications to ${recipe.name}.`
                 : `Restored standard recipe macros.`
             );
           }}
-          className={`px-5 py-3 rounded-2xl text-xs font-extrabold shadow-md transition flex items-center gap-2 self-start lg:self-center ${
+          className={`px-5 py-3 rounded-2xl text-xs font-extrabold shadow-md transition flex items-center gap-2 self-start lg:self-center cursor-pointer ${
             optimized
-              ? "bg-brand-lime text-brand-dark"
+              ? "bg-brand-lime text-brand-dark ring-2 ring-white"
               : "bg-white text-brand-dark hover:bg-brand-lime"
           }`}
         >
           <Sparkles className="w-4 h-4 text-brand-primary" />
-          {optimized ? "✓ Optimized Profile Active (Reset)" : "✨ Optimize Macro Profile"}
+          {optimized ? "✓ Optimized Profile Active (Click to Reset)" : "✨ Optimize Macro Profile"}
         </button>
       </section>
+
+      {/* Active Optimization Plan Banner (Shown when Optimize Macro Profile is clicked) */}
+      {optimized && (
+        <section className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-5 shadow-sm space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-emerald-700" />
+              Active Lower-Calorie / High-Protein Modification Plan for {recipe.name}
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-700 text-white">
+              +{proteinG - recipe.nutrition.proteinG}g Protein • -{recipe.nutrition.calories - cal} kcal Saved
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-emerald-950">
+            {optimizationSteps.map((tip, idx) => (
+              <div
+                key={idx}
+                className="p-3 rounded-xl bg-white border border-emerald-200 flex items-start gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span>{tip}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 5 LARGE MACRO ANALYTICS CARDS */}
       <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -168,7 +210,6 @@ export default function NutritionAnalyticsDashboardPage() {
 
       {/* CHARTS ROW: Calorie Distribution + Daily Progress Rings + Diet Compatibility */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Calorie Distribution Stacked Chart */}
         <section className="lg:col-span-4 bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-brand-primary">
@@ -228,14 +269,13 @@ export default function NutritionAnalyticsDashboardPage() {
           </div>
         </section>
 
-        {/* Center: Daily Nutrition Summary & Protein Progress Rings */}
         <section className="lg:col-span-4 bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5 flex flex-col justify-between">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-brand-primary">
               2,000 kcal Reference Intake
             </span>
             <h2 className="text-base font-extrabold text-brand-dark">
-              Daily Nutrition Summary &amp; Protein Progress
+              Daily Target Percentage
             </h2>
           </div>
 
@@ -273,12 +313,11 @@ export default function NutritionAnalyticsDashboardPage() {
 
           <p className="text-[11px] text-gray-600 bg-brand-surface/60 p-3 rounded-xl border border-brand-border">
             One serving of <strong>{recipe.name}</strong> fulfills{" "}
-            <strong>{dailyProtPct}%</strong> of your daily protein target while using only{" "}
+            <strong>{dailyProtPct}%</strong> of your daily protein target while using{" "}
             <strong>{dailyCalPct}%</strong> of your daily calorie allowance.
           </p>
         </section>
 
-        {/* Right: Diet Compatibility Matrix */}
         <section className="lg:col-span-4 bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-brand-primary">
@@ -317,7 +356,7 @@ export default function NutritionAnalyticsDashboardPage() {
           <div className="pt-2">
             <Link
               href={`/substitutions/${recipe.id}`}
-              className="w-full py-2.5 px-4 rounded-xl bg-brand-dark hover:bg-brand-primary text-brand-lime text-xs font-bold text-center block transition"
+              className="w-full py-2.5 px-4 rounded-xl bg-brand-dark hover:bg-brand-primary text-brand-lime text-xs font-bold text-center block transition cursor-pointer"
             >
               Adapt Ingredients in Substitution Workspace →
             </Link>

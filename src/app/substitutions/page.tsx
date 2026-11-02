@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import {
   RefreshCw,
   ArrowDown,
@@ -10,12 +10,14 @@ import {
   ShieldCheck,
   Beaker,
   ArrowLeft,
+  ArrowRight,
 } from "lucide-react";
 import { useFlavorIq } from "../../context/FlavorIqContext";
 
 interface DetailedSubOption {
   id: string;
   name: string;
+  cleanPantryName: string;
   compatibility: number;
   flavor: string;
   texture: string;
@@ -30,6 +32,7 @@ const WORKSPACE_DATA: Record<
   string,
   {
     originalName: string;
+    cleanOriginalName: string;
     originalFlavor: string;
     originalTexture: string;
     originalProtein: string;
@@ -40,6 +43,7 @@ const WORKSPACE_DATA: Record<
 > = {
   paneer: {
     originalName: "PANEER",
+    cleanOriginalName: "Paneer",
     originalFlavor: "Milky, sweet lactone (delta-decalactone)",
     originalTexture: "Firm, non-melting pressed curd",
     originalProtein: "18g / 100g",
@@ -49,6 +53,7 @@ const WORKSPACE_DATA: Record<
       {
         id: "tofu",
         name: "TOFU (EXTRA FIRM)",
+        cleanPantryName: "Tofu",
         compatibility: 94,
         flavor: "Clean neutral soy curd; absorbs masala & wok glazes",
         texture: "Firm pan-searable cube structure",
@@ -61,6 +66,7 @@ const WORKSPACE_DATA: Record<
       {
         id: "tempeh",
         name: "TEMPEH CUBES",
+        cleanPantryName: "Tempeh",
         compatibility: 87,
         flavor: "Nutty, savory roasted pyrazines",
         texture: "Dense, hearty bite; holds up in rich gravies",
@@ -73,6 +79,7 @@ const WORKSPACE_DATA: Record<
       {
         id: "chickpeas",
         name: "ROASTED CHICKPEAS",
+        cleanPantryName: "Chickpeas",
         compatibility: 72,
         flavor: "Earthy, nutty garbanzo aldehydes",
         texture: "Tender-crisp whole legume",
@@ -86,6 +93,7 @@ const WORKSPACE_DATA: Record<
   },
   tofu: {
     originalName: "FIRM TOFU",
+    cleanOriginalName: "Tofu",
     originalFlavor: "Neutral bean curd with mild hexanal",
     originalTexture: "Soft-firm porous cube",
     originalProtein: "15g / 100g",
@@ -95,6 +103,7 @@ const WORKSPACE_DATA: Record<
       {
         id: "paneer",
         name: "PANEER CUBES",
+        cleanPantryName: "Paneer",
         compatibility: 92,
         flavor: "Rich milky lactones create Indo-Chinese fusion sear",
         texture: "Chewy, golden-seared cube",
@@ -107,6 +116,7 @@ const WORKSPACE_DATA: Record<
       {
         id: "mushroom",
         name: "SHIITAKE / BUTTON MUSHROOMS",
+        cleanPantryName: "Mushroom",
         compatibility: 86,
         flavor: "Deep fungal umami (1-octen-3-ol)",
         texture: "Meaty, tender seared slices",
@@ -119,6 +129,7 @@ const WORKSPACE_DATA: Record<
       {
         id: "chickpeas",
         name: "CRISPY CHICKPEAS",
+        cleanPantryName: "Chickpeas",
         compatibility: 78,
         flavor: "Nutty roasted legume",
         texture: "Crunchy exterior, creamy center",
@@ -132,6 +143,7 @@ const WORKSPACE_DATA: Record<
   },
   pasta: {
     originalName: "DURUM PASTA",
+    cleanOriginalName: "Pasta",
     originalFlavor: "Toasted wheat maltol",
     originalTexture: "Al dente extruded tube",
     originalProtein: "12g / 100g",
@@ -141,6 +153,7 @@ const WORKSPACE_DATA: Record<
       {
         id: "chickpea-pasta",
         name: "CHICKPEA PENNE",
+        cleanPantryName: "Chickpeas",
         compatibility: 94,
         flavor: "Warm nutty legume notes complement tomato arrabbiata",
         texture: "Firm al dente bite",
@@ -153,6 +166,7 @@ const WORKSPACE_DATA: Record<
       {
         id: "rice-noodles",
         name: "FLAT RICE NOODLES",
+        cleanPantryName: "Noodles",
         compatibility: 84,
         flavor: "Clean neutral grain",
         texture: "Silky, tender ribbons",
@@ -166,6 +180,7 @@ const WORKSPACE_DATA: Record<
   },
   rice: {
     originalName: "BASMATI RICE",
+    cleanOriginalName: "Rice",
     originalFlavor: "Fragrant pandan-like 2-acetyl-1-pyrroline",
     originalTexture: "Fluffy long-grain",
     originalProtein: "8g / 100g",
@@ -175,6 +190,7 @@ const WORKSPACE_DATA: Record<
       {
         id: "quinoa",
         name: "TRICOLOR QUINOA",
+        cleanPantryName: "Quinoa",
         compatibility: 91,
         flavor: "Nutty, earthy roasted grain",
         texture: "Fluffy with subtle pop",
@@ -188,6 +204,7 @@ const WORKSPACE_DATA: Record<
   },
   spinach: {
     originalName: "SPINACH (PALAK)",
+    cleanOriginalName: "Spinach",
     originalFlavor: "Herbaceous green leaf ((Z)-3-hexenol)",
     originalTexture: "Tender wilted leaf",
     originalProtein: "3g / 100g",
@@ -197,6 +214,7 @@ const WORKSPACE_DATA: Record<
       {
         id: "kale",
         name: "BABY KALE / METHI LEAVES",
+        cleanPantryName: "Coriander",
         compatibility: 90,
         flavor: "Earthy, aromatic green volatiles",
         texture: "Hearty wilted greens",
@@ -212,10 +230,10 @@ const WORKSPACE_DATA: Record<
 
 export default function SmartSubstitutionWorkspacePage() {
   const params = useParams();
-  const router = useRouter();
   const recipeId = params?.id ? String(params.id) : null;
 
   const {
+    ingredients,
     selectedSubstitutionIngredient,
     setSelectedSubstitutionIngredient,
     applySubstituteToPantry,
@@ -232,19 +250,21 @@ export default function SmartSubstitutionWorkspacePage() {
   const currentGroup = WORKSPACE_DATA[targetKey];
 
   const [selectedSubIndex, setSelectedSubIndex] = useState<number>(0);
+  const [appliedSwapMessage, setAppliedSwapMessage] = useState<string | null>(
+    null
+  );
+
   const activeSub =
     currentGroup.options[selectedSubIndex] || currentGroup.options[0];
 
   const handleApply = () => {
-    const cleanSubName = activeSub.name
-      .split("(")[0]
-      .trim()
-      .toLowerCase()
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-    applySubstituteToPantry(currentGroup.originalName, cleanSubName);
-    if (contextRecipe) {
-      router.push(`/recipes/${contextRecipe.id}`);
-    }
+    applySubstituteToPantry(
+      currentGroup.cleanOriginalName,
+      activeSub.cleanPantryName
+    );
+    setAppliedSwapMessage(
+      `Swapped ${currentGroup.cleanOriginalName} → ${activeSub.cleanPantryName} (${activeSub.compatibility}% compatibility) in your active pantry!`
+    );
   };
 
   return (
@@ -253,7 +273,7 @@ export default function SmartSubstitutionWorkspacePage() {
         <div className="flex items-center justify-between">
           <Link
             href={`/recipes/${contextRecipe.id}`}
-            className="inline-flex items-center gap-2 text-xs font-extrabold text-brand-primary hover:text-brand-dark"
+            className="inline-flex items-center gap-2 text-xs font-extrabold text-brand-primary hover:text-brand-dark cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             Adapting Recipe: {contextRecipe.name}
@@ -262,20 +282,48 @@ export default function SmartSubstitutionWorkspacePage() {
       )}
 
       {/* Workspace Header */}
-      <section className="rounded-3xl bg-gradient-to-r from-brand-dark to-brand-primary text-white p-6 sm:p-8 shadow-md">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-brand-lime text-xs font-extrabold">
-          <RefreshCw className="w-3.5 h-3.5" />
-          3-Column Molecular Substitution Workspace
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-extrabold mt-2">
-          Smart Ingredient Substitution Lab
-        </h1>
-        <p className="text-xs sm:text-sm text-brand-lime/90 max-w-2xl mt-1">
-          Select an original ingredient on the left, choose a FlavorDB-ranked replacement in the center, and inspect the side-by-side Flavor, Texture, Protein, Calorie, and Diet comparison on the right.
-        </p>
+      <section className="rounded-3xl bg-gradient-to-r from-brand-dark to-brand-primary text-white p-6 sm:p-8 shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-brand-lime text-xs font-extrabold">
+            <RefreshCw className="w-3.5 h-3.5" />
+            3-Column Molecular Substitution Workspace
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold mt-2">
+            Smart Ingredient Substitution Lab
+          </h1>
+          <p className="text-xs sm:text-sm text-brand-lime/90 max-w-2xl mt-1">
+            Select an original ingredient on the left, choose a FlavorDB-ranked replacement in the center, and inspect the side-by-side Flavor, Texture, Protein, Calorie, and Diet comparison on the right.
+          </p>
+        </div>
+
+        <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/15 text-xs shrink-0">
+          <span className="font-bold text-brand-lime block">
+            Active Kitchen Pantry ({ingredients.length}):
+          </span>
+          <span className="text-white/90">
+            {ingredients.join(", ") || "Empty"}
+          </span>
+        </div>
       </section>
 
-      {/* 3-COLUMN WORKSPACE: LEFT = Original Ingredient, CENTER = Replacement Suggestions, RIGHT = Comparison */}
+      {/* Live Swap Confirmation Banner */}
+      {appliedSwapMessage && (
+        <section className="bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5 text-xs font-extrabold text-emerald-950">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{appliedSwapMessage}</span>
+          </div>
+          <Link
+            href={contextRecipe ? `/recipes/${contextRecipe.id}` : "/recipes"}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-dark text-white text-xs font-extrabold transition cursor-pointer"
+          >
+            View Updated Recommendations
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </section>
+      )}
+
+      {/* 3-COLUMN WORKSPACE */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* LEFT COLUMN: Original Ingredient */}
         <section className="lg:col-span-3 bg-white rounded-2xl border border-brand-border p-5 shadow-sm flex flex-col justify-between space-y-4">
@@ -297,8 +345,9 @@ export default function SmartSubstitutionWorkspacePage() {
                     onClick={() => {
                       setSelectedSubstitutionIngredient(key);
                       setSelectedSubIndex(0);
+                      setAppliedSwapMessage(null);
                     }}
-                    className={`w-full text-left p-3.5 rounded-xl border transition flex items-center justify-between ${
+                    className={`w-full text-left p-3.5 rounded-xl border transition flex items-center justify-between cursor-pointer ${
                       active
                         ? "bg-brand-dark text-brand-lime border-brand-dark font-extrabold shadow-xs"
                         : "bg-brand-surface/50 text-brand-dark border-brand-border hover:bg-brand-lime/40 font-bold"
@@ -334,11 +383,10 @@ export default function SmartSubstitutionWorkspacePage() {
             </h2>
           </div>
 
-          {/* Visual Flow Header */}
           <div className="p-3 rounded-xl bg-brand-surface text-center font-extrabold text-xs text-brand-dark border border-brand-border">
             {currentGroup.originalName}
             <ArrowDown className="w-4 h-4 text-brand-primary mx-auto my-1" />
-            Select Replacement Below
+            Click Any Replacement Below
           </div>
 
           <div className="space-y-3">
@@ -348,10 +396,13 @@ export default function SmartSubstitutionWorkspacePage() {
                 <button
                   key={opt.id}
                   type="button"
-                  onClick={() => setSelectedSubIndex(idx)}
-                  className={`w-full text-left p-4 rounded-2xl border transition space-y-2 ${
+                  onClick={() => {
+                    setSelectedSubIndex(idx);
+                    setAppliedSwapMessage(null);
+                  }}
+                  className={`w-full text-left p-4 rounded-2xl border transition space-y-2 cursor-pointer ${
                     selected
-                      ? "bg-brand-lime/40 border-brand-primary shadow-sm ring-2 ring-brand-primary/30"
+                      ? "bg-brand-lime/50 border-brand-primary shadow-sm ring-2 ring-brand-primary/30"
                       : "bg-white border-brand-border hover:bg-brand-surface/50"
                   }`}
                 >
@@ -387,7 +438,7 @@ export default function SmartSubstitutionWorkspacePage() {
                   Column 3 • Molecular &amp; Sensory Comparison
                 </span>
                 <h2 className="text-lg font-extrabold text-brand-dark">
-                  {currentGroup.originalName} vs. {activeSub.name}
+                  {currentGroup.originalName} → {activeSub.name}
                 </h2>
               </div>
               <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 text-xs font-extrabold">
@@ -427,7 +478,7 @@ export default function SmartSubstitutionWorkspacePage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
                   <span className="text-[10px] font-extrabold uppercase text-emerald-800 block">
-                    Protein Comparison
+                    Protein
                   </span>
                   <p className="text-xs font-extrabold text-emerald-950 mt-1">
                     {activeSub.protein}
@@ -439,7 +490,7 @@ export default function SmartSubstitutionWorkspacePage() {
 
                 <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200">
                   <span className="text-[10px] font-extrabold uppercase text-amber-800 block">
-                    Calorie Comparison
+                    Calories
                   </span>
                   <p className="text-xs font-extrabold text-amber-950 mt-1">
                     {activeSub.calories}
@@ -489,10 +540,11 @@ export default function SmartSubstitutionWorkspacePage() {
           <button
             type="button"
             onClick={handleApply}
-            className="w-full py-3.5 px-5 rounded-xl bg-brand-primary hover:bg-brand-dark text-white text-sm font-extrabold shadow-md transition flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-5 rounded-xl bg-brand-primary hover:bg-brand-dark text-white text-sm font-extrabold shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4 text-brand-lime" />
-            Apply Substitute (Swap {currentGroup.originalName} → {activeSub.name})
+            Apply Substitute (Swap {currentGroup.cleanOriginalName} →{" "}
+            {activeSub.cleanPantryName})
           </button>
         </section>
       </div>

@@ -14,6 +14,7 @@ import {
   Eye,
   ShoppingCart,
   CheckCircle2,
+  Check,
 } from "lucide-react";
 import { RankedRecipeResult } from "../lib/recommendation/scoring";
 import { useFlavorIq } from "../context/FlavorIqContext";
@@ -33,7 +34,9 @@ export default function RecipeCard({
     toggleSaveRecipe,
     isRecipeCompared,
     toggleCompareRecipe,
+    isRecipeInMealPlan,
     quickAddToMealPlan,
+    groceryAddedRecipeIds,
     addMissingIngredientsToGrocery,
     setSelectedNutritionRecipeId,
     setSelectedSubstitutionIngredient,
@@ -49,13 +52,8 @@ export default function RecipeCard({
   } = item;
   const saved = isRecipeSaved(recipe.id);
   const compared = isRecipeCompared(recipe.id);
-
-  const handleCompare = () => {
-    if (!compared) {
-      toggleCompareRecipe(recipe.id);
-    }
-    router.push("/compare");
-  };
+  const inGrocery = groceryAddedRecipeIds.includes(recipe.id);
+  const inMealPlan = isRecipeInMealPlan(recipe.id);
 
   const handleNutrition = () => {
     setSelectedNutritionRecipeId(recipe.id);
@@ -71,44 +69,40 @@ export default function RecipeCard({
     router.push(`/substitutions/${recipe.id}`);
   };
 
-  const handleAddToGrocery = () => {
-    addMissingIngredientsToGrocery(recipe);
-    router.push("/grocery");
-  };
-
-  const handleAddToMealPlan = () => {
-    quickAddToMealPlan(recipe.id);
-    router.push("/meal-planner");
-  };
-
   return (
-    <article className="bg-white rounded-2xl border border-brand-border shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col">
+    <article
+      className={`bg-white rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col hover:shadow-md ${
+        compared
+          ? "border-brand-primary ring-1 ring-brand-primary/30"
+          : "border-brand-border shadow-sm"
+      }`}
+    >
       <div className="grid grid-cols-1 md:grid-cols-12">
-        <div className="md:col-span-4 relative min-h-[210px] bg-brand-dark/10 overflow-hidden">
-          <img
-            src={recipe.image}
-            alt={recipe.name}
-            className="w-full h-full object-cover min-h-[210px] hover:scale-105 transition-transform duration-500"
-            loading="lazy"
-          />
-          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+        {/* Clickable Recipe Image */}
+        <div className="md:col-span-4 relative min-h-[210px] bg-brand-dark/10 overflow-hidden group">
+          <Link href={`/recipes/${recipe.id}`} className="block w-full h-full cursor-pointer">
+            <img
+              src={recipe.image}
+              alt={recipe.name}
+              className="w-full h-full object-cover min-h-[210px] group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+            />
+          </Link>
+          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 pointer-events-none">
             {rank !== undefined && (
               <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-brand-dark/90 text-brand-lime backdrop-blur-xs shadow">
                 #{rank} Match
               </span>
             )}
-            <Link
-              href={`/cuisines/${recipe.cuisine.toLowerCase()}`}
-              className="px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 hover:bg-brand-lime text-brand-dark shadow transition"
-            >
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 text-brand-dark shadow">
               {recipe.cuisine}
-            </Link>
+            </span>
           </div>
           <button
             type="button"
             onClick={() => toggleSaveRecipe(recipe.id)}
             aria-label="Save Recipe"
-            className={`absolute top-3 right-3 p-2 rounded-full shadow transition ${
+            className={`absolute top-3 right-3 p-2 rounded-full shadow transition cursor-pointer ${
               saved
                 ? "bg-red-500 text-white"
                 : "bg-white/90 text-gray-700 hover:bg-white"
@@ -118,6 +112,7 @@ export default function RecipeCard({
           </button>
         </div>
 
+        {/* Right Header Info */}
         <div className="md:col-span-8 p-5 flex flex-col justify-between bg-gradient-to-br from-white to-brand-surface/40">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="space-y-1.5">
@@ -143,7 +138,7 @@ export default function RecipeCard({
 
               <Link
                 href={`/recipes/${recipe.id}`}
-                className="text-lg sm:text-xl font-extrabold text-brand-dark hover:text-brand-primary transition block"
+                className="text-lg sm:text-xl font-extrabold text-brand-dark hover:text-brand-primary transition block cursor-pointer"
               >
                 {recipe.name}
               </Link>
@@ -168,7 +163,10 @@ export default function RecipeCard({
               </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-white px-3.5 py-2.5 rounded-2xl border border-brand-border shadow-2xs self-start shrink-0">
+            <Link
+              href={`/recipes/${recipe.id}`}
+              className="flex items-center gap-3 bg-white hover:bg-brand-surface/60 px-3.5 py-2.5 rounded-2xl border border-brand-border shadow-2xs self-start shrink-0 transition cursor-pointer"
+            >
               <ScoreRing score={scoreBreakdown.totalScore} size={58} />
               <div className="text-left">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary block">
@@ -181,7 +179,7 @@ export default function RecipeCard({
                   FlavorDB: {flavorCompatibility.flavorFitLabel}
                 </span>
               </div>
-            </div>
+            </Link>
           </div>
 
           <div className="mt-4 pt-3 border-t border-brand-border/60">
@@ -190,6 +188,7 @@ export default function RecipeCard({
         </div>
       </div>
 
+      {/* Matched vs Missing Strip */}
       <div className="px-5 py-3.5 bg-brand-surface/40 border-t border-brand-border/70 grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
         <div className="lg:col-span-7 space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -227,76 +226,139 @@ export default function RecipeCard({
           </div>
         </div>
 
-        <div className="lg:col-span-5 bg-white rounded-xl p-2.5 border border-brand-border/80 flex items-start gap-2">
+        <Link
+          href="/flavor-intelligence"
+          className="lg:col-span-5 bg-white hover:bg-brand-lime/30 rounded-xl p-2.5 border border-brand-border/80 flex items-start gap-2 transition cursor-pointer"
+        >
           <Beaker className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
           <div className="space-y-0.5">
             <span className="text-[11px] font-bold text-brand-dark block">
-              FlavorDB Molecular Signal
+              FlavorDB Molecular Signal →
             </span>
             <p className="text-[11px] text-gray-600 line-clamp-2">
               {flavorCompatibility.supportingSignals[0] ||
                 explanations.flavorCompatibilityText}
             </p>
           </div>
-        </div>
+        </Link>
       </div>
 
-      {/* Bottom Action Bar — Every Button Navigates to Its Dedicated Route */}
-      <div className="px-5 py-3 bg-white border-t border-brand-border flex flex-wrap items-center justify-between gap-2">
+      {/* Bottom Action Bar — Distinct Visual Hierarchy & Visible Feedback */}
+      <div className="px-5 py-3.5 bg-white border-t border-brand-border flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
+          {/* Primary Action: Strong Filled Button */}
           <Link
             href={`/recipes/${recipe.id}`}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-dark hover:bg-brand-primary text-white text-xs font-bold transition shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-dark hover:bg-brand-primary text-white text-xs font-extrabold transition shadow-xs cursor-pointer"
           >
             <Eye className="w-3.5 h-3.5 text-brand-lime" />
-            View Full Recipe
+            View Recipe
           </Link>
 
+          {/* Secondary Action: Outlined Button with Active State */}
           <button
             type="button"
-            onClick={handleCompare}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border border-brand-border transition"
+            onClick={() => toggleCompareRecipe(recipe.id)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+              compared
+                ? "bg-brand-primary text-white border-brand-primary"
+                : "bg-white hover:bg-brand-surface text-brand-dark border-brand-border"
+            }`}
           >
-            <BarChart2 className="w-3.5 h-3.5 text-brand-primary" />
-            Compare
+            {compared ? (
+              <>
+                <Check className="w-3.5 h-3.5" />
+                Added to Compare
+              </>
+            ) : (
+              <>
+                <BarChart2 className="w-3.5 h-3.5 text-brand-primary" />
+                Compare
+              </>
+            )}
+          </button>
+
+          {/* Secondary Action: Save with Visible State */}
+          <button
+            type="button"
+            onClick={() => toggleSaveRecipe(recipe.id)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+              saved
+                ? "bg-red-50 text-red-700 border-red-300"
+                : "bg-white hover:bg-brand-surface text-brand-dark border-brand-border"
+            }`}
+          >
+            <Heart
+              className={`w-3.5 h-3.5 ${
+                saved ? "fill-current text-red-600" : "text-gray-500"
+              }`}
+            />
+            {saved ? "Saved ✓" : "Save"}
+          </button>
+
+          {/* Tertiary Actions: Subtle Text/Surface Style */}
+          <button
+            type="button"
+            onClick={handleSubstitute}
+            className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-bold text-brand-primary hover:bg-brand-surface transition cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Substitute
           </button>
 
           <button
             type="button"
             onClick={handleNutrition}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border border-brand-border transition"
+            className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-bold text-orange-700 hover:bg-orange-50 transition cursor-pointer"
           >
             <Flame className="w-3.5 h-3.5 text-orange-600" />
             Nutrition
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSubstitute}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-surface hover:bg-brand-lime/60 text-brand-dark border border-brand-border transition"
-          >
-            <RefreshCw className="w-3.5 h-3.5 text-brand-primary" />
-            Substitute
           </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={handleAddToGrocery}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition"
+            onClick={() => addMissingIngredientsToGrocery(recipe)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+              inGrocery
+                ? "bg-emerald-50 text-emerald-900 border-emerald-300"
+                : "bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-200"
+            }`}
           >
-            <ShoppingCart className="w-3.5 h-3.5" />
-            Add to Grocery
+            {inGrocery ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                Added to Grocery List
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="w-3.5 h-3.5" />
+                Grocery
+              </>
+            )}
           </button>
 
           <button
             type="button"
-            onClick={handleAddToMealPlan}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-brand-lime hover:bg-brand-primary hover:text-white text-brand-dark transition"
+            onClick={() => quickAddToMealPlan(recipe.id)}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+              inMealPlan
+                ? "bg-brand-primary text-white"
+                : "bg-brand-lime hover:bg-brand-primary hover:text-white text-brand-dark"
+            }`}
           >
-            <Calendar className="w-3.5 h-3.5" />
-            Meal Plan
+            {inMealPlan ? (
+              <>
+                <Check className="w-3.5 h-3.5" />
+                Added to Meal Plan
+              </>
+            ) : (
+              <>
+                <Calendar className="w-3.5 h-3.5" />
+                Add to Meal Plan
+              </>
+            )}
           </button>
         </div>
       </div>

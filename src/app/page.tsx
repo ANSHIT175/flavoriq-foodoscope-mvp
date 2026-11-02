@@ -2,23 +2,16 @@
 
 import React, { useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Utensils,
   Sparkles,
   Beaker,
-  Flame,
-  ShoppingCart,
-  Calendar,
   Award,
   CheckCircle2,
   ArrowRight,
-  Clock,
-  Heart,
   BookOpen,
   Play,
-  Compass,
-  RefreshCw,
+  Check,
 } from "lucide-react";
 import {
   useFlavorIq,
@@ -35,49 +28,47 @@ const QUICK_ACTIONS = [
     label: "Find Recipes",
     desc: "Pantry + 100-pt recommendation engine",
     href: "/recipes",
-    accent: "from-emerald-600 to-brand-primary",
   },
   {
     emoji: "🧠",
     label: "Generate Recipe",
     desc: "Creative AI culinary synthesis studio",
     href: "/generator",
-    accent: "from-brand-dark to-emerald-800",
   },
   {
     emoji: "🔬",
     label: "Explore Flavors",
     desc: "Interactive FlavorDB molecular graph",
     href: "/flavor-intelligence",
-    accent: "from-teal-700 to-emerald-700",
   },
   {
     emoji: "🥗",
     label: "Nutrition",
     desc: "Macro rings, protein score & optimizer",
     href: "/nutrition",
-    accent: "from-amber-600 to-orange-600",
   },
   {
     emoji: "🛒",
     label: "Grocery List",
     desc: "Smart pantry gap shopping checklist",
     href: "/grocery",
-    accent: "from-emerald-700 to-teal-800",
   },
   {
     emoji: "📅",
     label: "Meal Planner",
     desc: "7-day breakfast, lunch & dinner calendar",
     href: "/meal-planner",
-    accent: "from-brand-primary to-brand-dark",
   },
 ];
 
 export default function DashboardCommandCenter() {
-  const router = useRouter();
   const {
     ingredients,
+    cuisine,
+    taste,
+    dietaryPreference,
+    maxCookingTime,
+    activePresetId,
     rankedResults,
     allRecipes,
     savedRecipeIds,
@@ -86,8 +77,18 @@ export default function DashboardCommandCenter() {
     applyDemoPreset,
   } = useFlavorIq();
 
-  const topScore = rankedResults[0]?.scoreBreakdown.totalScore ?? 93;
-  const topRecommendations = rankedResults.slice(0, 3);
+  const topMatch = rankedResults[0];
+  const topScore = topMatch?.scoreBreakdown.totalScore ?? 93;
+  const topRecommendations = rankedResults.slice(0, 4);
+
+  const activeFlavorMatchesCount = useMemo(
+    () =>
+      rankedResults.reduce(
+        (acc, r) => acc + r.flavorCompatibility.matchedRelationships.length,
+        0
+      ),
+    [rankedResults]
+  );
 
   const savedRecipesList = useMemo(
     () => allRecipes.filter((r) => savedRecipeIds.includes(r.id)).slice(0, 3),
@@ -97,8 +98,6 @@ export default function DashboardCommandCenter() {
   const weeklyNutrition = useMemo(() => {
     let calories = 0;
     let protein = 0;
-    let carbs = 0;
-    let fat = 0;
     let count = 0;
     for (const d of DAYS_OF_WEEK) {
       for (const s of MEAL_SLOTS) {
@@ -108,14 +107,12 @@ export default function DashboardCommandCenter() {
           if (rec) {
             calories += rec.nutrition.calories;
             protein += rec.nutrition.proteinG;
-            carbs += rec.nutrition.carbsG;
-            fat += rec.nutrition.fatG;
             count++;
           }
         }
       }
     }
-    return { calories, protein, carbs, fat, count };
+    return { calories, protein, count };
   }, [mealPlan, allRecipes]);
 
   const featuredFlavorPairs = useMemo(
@@ -125,13 +122,13 @@ export default function DashboardCommandCenter() {
 
   return (
     <div className="space-y-8">
-      {/* 1. WELCOME HERO BANNER */}
+      {/* 1. HERO BANNER */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-dark via-[#193D22] to-brand-primary text-white p-6 sm:p-10 shadow-lg">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-8 space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-brand-lime/30 text-brand-lime text-xs font-bold">
               <Beaker className="w-3.5 h-3.5" />
-              <span>FLAVORIQ Command Center • RecipeDB + FlavorDB Intelligence</span>
+              <span>RecipeDB + FlavorDB Molecular Recommendation Engine</span>
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
@@ -139,13 +136,14 @@ export default function DashboardCommandCenter() {
             </h1>
 
             <p className="text-sm sm:text-base text-brand-lime/90 max-w-2xl leading-relaxed">
-              Discover recipes that match what you have, how you eat, and what you love. Navigate across our dedicated molecular pairing lab, recipe finder, nutrition analyzer, and smart substitution workspace.
+              Discover recipes that match what you have, how you eat, and what you love — powered by transparent 100-point multi-factor scoring and shared volatile flavor compound intelligence.
             </p>
 
+            {/* Primary, Secondary, and Tertiary Action Buttons */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <Link
                 href="/recipes"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-lime hover:bg-white text-brand-dark font-extrabold text-sm shadow-md transition"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-lime hover:bg-white text-brand-dark font-extrabold text-sm shadow-md transition cursor-pointer"
               >
                 <Utensils className="w-4 h-4 text-brand-primary" />
                 Find My Recipes
@@ -153,76 +151,94 @@ export default function DashboardCommandCenter() {
 
               <Link
                 href="/generator"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/25 font-bold text-sm transition"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/30 font-bold text-sm transition cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-brand-lime" />
                 Generate with AI
               </Link>
 
               <Link
-                href="/about"
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-bold text-brand-lime hover:underline"
+                href="/flavor-intelligence"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-bold text-brand-lime hover:text-white hover:underline transition cursor-pointer"
               >
-                <BookOpen className="w-3.5 h-3.5" />
-                How FLAVORIQ Works →
+                Explore Flavor Network
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>
 
-          {/* Active Kitchen Context Summary Box */}
-          <div className="lg:col-span-4 bg-black/25 backdrop-blur-md rounded-2xl p-5 border border-white/15 space-y-3">
+          {/* Right Hero Card: Active Top Recommendation */}
+          <div className="lg:col-span-4 bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-brand-lime">
-                Active Kitchen Snapshot
+                Active Top Recommendation
               </span>
-              <Link
-                href="/recipes"
-                className="text-[11px] font-bold text-white underline hover:text-brand-lime"
-              >
-                Edit Pantry →
-              </Link>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-brand-lime text-brand-dark">
+                {topScore}/100 Score
+              </span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {ingredients.slice(0, 7).map((ing) => (
-                <span
-                  key={ing}
-                  className="px-2.5 py-1 rounded-lg bg-white/15 text-white text-xs font-semibold"
+
+            {topMatch ? (
+              <>
+                <Link
+                  href={`/recipes/${topMatch.recipe.id}`}
+                  className="text-base font-extrabold text-white hover:text-brand-lime line-clamp-1 block transition"
                 >
-                  {ing}
-                </span>
-              ))}
-              {ingredients.length > 7 && (
-                <span className="px-2 py-1 rounded-lg bg-brand-lime text-brand-dark text-xs font-bold">
-                  +{ingredients.length - 7} more
-                </span>
-              )}
-            </div>
-            <div className="pt-2 border-t border-white/15 flex items-center justify-between text-xs">
-              <span className="text-brand-lime/90">Best Current Match:</span>
-              <Link
-                href={`/recipes/${rankedResults[0]?.recipe.id || "fiq-rec-01"}`}
-                className="font-extrabold text-brand-lime hover:underline truncate max-w-[180px]"
-              >
-                {rankedResults[0]?.recipe.name || "Kadai Paneer"} ({topScore}/100)
-              </Link>
-            </div>
+                  {topMatch.recipe.name}
+                </Link>
+                <p className="text-xs text-brand-lime/90">
+                  {topMatch.recipe.cuisine} • {topMatch.recipe.cookingTimeMinutes} min • Core Fit{" "}
+                  {topMatch.ingredientMatch.fitDisplay}
+                </p>
+                <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                  <div className="bg-black/25 rounded-xl p-2">
+                    <span className="text-sm font-extrabold text-brand-lime block">
+                      {topMatch.scoreBreakdown.ingredientCoverage}/30
+                    </span>
+                    <span className="text-[10px] text-white/75">Pantry</span>
+                  </div>
+                  <div className="bg-black/25 rounded-xl p-2">
+                    <span className="text-sm font-extrabold text-brand-lime block">
+                      {topMatch.scoreBreakdown.flavorCompatibility}/25
+                    </span>
+                    <span className="text-[10px] text-white/75">FlavorDB</span>
+                  </div>
+                  <div className="bg-black/25 rounded-xl p-2">
+                    <span className="text-sm font-extrabold text-brand-lime block">
+                      {topMatch.scoreBreakdown.preferenceFitCombined}/25
+                    </span>
+                    <span className="text-[10px] text-white/75">Context</span>
+                  </div>
+                </div>
+                <Link
+                  href={`/recipes/${topMatch.recipe.id}`}
+                  className="w-full mt-2 py-2.5 px-3 rounded-xl bg-white/15 hover:bg-brand-lime hover:text-brand-dark text-xs font-extrabold text-center block transition cursor-pointer"
+                >
+                  Inspect Molecular Breakdown →
+                </Link>
+              </>
+            ) : (
+              <p className="text-xs text-white/80">
+                Select a Demo Preset below or open Recipe Finder to compute recommendations.
+              </p>
+            )}
           </div>
         </div>
       </section>
 
-      {/* 2. 4 KPI STATISTICS CARDS */}
+      {/* 2. 4 KPI STATISTICS CARDS (Dynamically Reactive to Active Pantry & Context) */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Link
           href="/recipes"
-          className="bg-white rounded-2xl border border-brand-border p-5 shadow-2xs hover:shadow-md hover:border-brand-primary transition flex items-center justify-between"
+          className="bg-white rounded-2xl border border-brand-border p-5 shadow-2xs hover:shadow-md hover:border-brand-primary transition flex items-center justify-between cursor-pointer"
         >
           <div>
             <p className="text-xs font-semibold text-gray-500">Recipes Analyzed</p>
             <p className="text-2xl sm:text-3xl font-extrabold text-brand-dark mt-1">
-              {totalCandidatesEvaluated}
+              {rankedResults.length}/{totalCandidatesEvaluated}
             </p>
             <p className="text-[11px] text-brand-primary font-semibold mt-0.5">
-              Click to open Recipe Finder →
+              {cuisine} • {maxCookingTime}
             </p>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-brand-surface flex items-center justify-center text-brand-primary">
@@ -232,15 +248,15 @@ export default function DashboardCommandCenter() {
 
         <Link
           href="/flavor-intelligence"
-          className="bg-white rounded-2xl border border-brand-border p-5 shadow-2xs hover:shadow-md hover:border-brand-primary transition flex items-center justify-between"
+          className="bg-white rounded-2xl border border-brand-border p-5 shadow-2xs hover:shadow-md hover:border-brand-primary transition flex items-center justify-between cursor-pointer"
         >
           <div>
             <p className="text-xs font-semibold text-gray-500">Flavor Matches</p>
             <p className="text-2xl sm:text-3xl font-extrabold text-brand-dark mt-1">
-              26 Bridges
+              {activeFlavorMatchesCount} Pairs
             </p>
             <p className="text-[11px] text-brand-primary font-semibold mt-0.5">
-              Open Molecular Graph →
+              Active FlavorDB Bridges →
             </p>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-brand-surface flex items-center justify-center text-brand-primary">
@@ -249,16 +265,16 @@ export default function DashboardCommandCenter() {
         </Link>
 
         <Link
-          href="/grocery"
-          className="bg-white rounded-2xl border border-brand-border p-5 shadow-2xs hover:shadow-md hover:border-brand-primary transition flex items-center justify-between"
+          href="/recipes"
+          className="bg-white rounded-2xl border border-brand-border p-5 shadow-2xs hover:shadow-md hover:border-brand-primary transition flex items-center justify-between cursor-pointer"
         >
           <div>
             <p className="text-xs font-semibold text-gray-500">Ingredients Matched</p>
             <p className="text-2xl sm:text-3xl font-extrabold text-brand-dark mt-1">
-              {ingredients.length} Items
+              {ingredients.length}
             </p>
-            <p className="text-[11px] text-brand-primary font-semibold mt-0.5">
-              View Pantry &amp; Grocery →
+            <p className="text-[11px] text-brand-primary font-semibold mt-0.5 truncate max-w-[160px]">
+              {ingredients.slice(0, 3).join(", ")}...
             </p>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-brand-surface flex items-center justify-center text-brand-primary">
@@ -267,16 +283,16 @@ export default function DashboardCommandCenter() {
         </Link>
 
         <Link
-          href="/compare"
-          className="bg-white rounded-2xl border border-brand-border p-5 shadow-2xs hover:shadow-md hover:border-brand-primary transition flex items-center justify-between"
+          href={`/recipes/${topMatch?.recipe.id || "fiq-rec-01"}`}
+          className="bg-white rounded-2xl border border-brand-border p-5 shadow-2xs hover:shadow-md hover:border-brand-primary transition flex items-center justify-between cursor-pointer"
         >
           <div>
             <p className="text-xs font-semibold text-gray-500">Personalized Score</p>
             <p className="text-2xl sm:text-3xl font-extrabold text-brand-primary mt-1">
               {topScore}/100
             </p>
-            <p className="text-[11px] text-gray-600 font-semibold mt-0.5">
-              Compare Top Recipes →
+            <p className="text-[11px] text-gray-600 font-semibold mt-0.5 truncate max-w-[160px]">
+              #1: {topMatch?.recipe.name || "Kadai Paneer"}
             </p>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-brand-lime/60 flex items-center justify-center text-brand-dark">
@@ -285,15 +301,79 @@ export default function DashboardCommandCenter() {
         </Link>
       </section>
 
-      {/* 3. 6 QUICK ACTION LAUNCHPAD BUTTONS */}
+      {/* 3. INTERACTIVE JUDGE DEMO PRESETS (Updates State, Pantry, Scores & Metrics Immediately!) */}
+      <section className="bg-white rounded-2xl border border-brand-border p-5 sm:p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-brand-primary flex items-center gap-1.5">
+              <Play className="w-3.5 h-3.5" />
+              Interactive Judge Demo Mode
+            </span>
+            <h2 className="text-base font-extrabold text-brand-dark mt-0.5">
+              Quick Demo Scenarios — Click Any Preset to Update Pantry, Context &amp; Top Matches Live
+            </h2>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="font-semibold text-gray-500">Active Context:</span>
+            <span className="px-2.5 py-1 rounded-lg bg-brand-surface border border-brand-border font-bold text-brand-dark">
+              {cuisine} • {taste} • {dietaryPreference} • {maxCookingTime}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {JUDGE_DEMO_PRESETS.map((preset) => {
+            const isSelected = activePresetId === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => applyDemoPreset(preset)}
+                className={`group text-left p-4 rounded-2xl border transition flex flex-col justify-between gap-2 cursor-pointer ${
+                  isSelected
+                    ? "bg-brand-lime/50 border-brand-primary ring-2 ring-brand-primary/30 shadow-xs"
+                    : "bg-brand-surface/40 border-brand-border hover:bg-brand-lime/30 hover:border-brand-primary/50"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-extrabold text-brand-dark flex items-center gap-1">
+                      {isSelected && (
+                        <Check className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                      )}
+                      {preset.label}
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-dark text-brand-lime shrink-0">
+                      {preset.badge}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 mt-1.5 leading-snug">
+                    {preset.description}
+                  </p>
+                </div>
+                <span className="text-[11px] font-bold text-brand-primary flex items-center gap-1 pt-1">
+                  {isSelected
+                    ? "✓ Active Scenario Loaded"
+                    : "Load Preset & Recalculate →"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 4. 6 QUICK ACTION LAUNCHPAD BUTTONS */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-extrabold text-brand-dark">
-            Quick Action Modules — Jump to Any Workspace
+            Application Modules — Click Any Workspace to Open
           </h2>
-          <span className="text-xs text-gray-500">
-            Each module opens its own dedicated interface
-          </span>
+          <Link
+            href="/about"
+            className="text-xs font-bold text-brand-primary hover:underline flex items-center gap-1"
+          >
+            <BookOpen className="w-3.5 h-3.5" /> View 7-Stage Pipeline
+          </Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
@@ -301,7 +381,7 @@ export default function DashboardCommandCenter() {
             <Link
               key={act.href}
               href={act.href}
-              className="group bg-white rounded-2xl border border-brand-border p-4 shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col justify-between gap-3"
+              className="group bg-white rounded-2xl border border-brand-border p-4 shadow-2xs hover:shadow-md hover:border-brand-primary hover:-translate-y-0.5 transition-all flex flex-col justify-between gap-3 cursor-pointer"
             >
               <div className="w-10 h-10 rounded-xl bg-brand-surface group-hover:bg-brand-lime flex items-center justify-center text-lg transition">
                 {act.emoji}
@@ -322,24 +402,24 @@ export default function DashboardCommandCenter() {
         </div>
       </section>
 
-      {/* 4. BENTO GRID: RECOMMENDED RECIPES + FLAVOR INSIGHTS */}
+      {/* 5. BENTO GRID: LIVE TOP RECOMMENDED RECIPES + FLAVORDB INSIGHTS */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Recommended Recipes Spotlight (Compact Analytics Cards) */}
+        {/* Left: Recommended Recipes Spotlight (Changes Live When Presets/Pantry Change!) */}
         <section className="lg:col-span-7 bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-brand-primary">
-                Live Engine Output
+                Live Recommendation Output ({cuisine} • {maxCookingTime})
               </span>
               <h2 className="text-lg font-extrabold text-brand-dark">
-                Top Recommended Recipes for Your Pantry
+                Top Ranked Matches for Your Active Pantry
               </h2>
             </div>
             <Link
               href="/recipes"
-              className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-brand-primary hover:bg-brand-dark text-white text-xs font-bold transition"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-dark hover:bg-brand-primary text-white text-xs font-extrabold transition cursor-pointer"
             >
-              Open Recipe Finder <ArrowRight className="w-3.5 h-3.5" />
+              Customize Pantry in Recipe Finder <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
@@ -347,9 +427,12 @@ export default function DashboardCommandCenter() {
             {topRecommendations.map((item, idx) => (
               <div
                 key={item.recipe.id}
-                className="p-3.5 rounded-2xl border border-brand-border/80 bg-brand-surface/30 hover:bg-white hover:shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="p-3.5 rounded-2xl border border-brand-border/80 bg-brand-surface/30 hover:bg-white hover:border-brand-primary hover:shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
-                <div className="flex items-center gap-3.5 min-w-0">
+                <Link
+                  href={`/recipes/${item.recipe.id}`}
+                  className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer"
+                >
                   <img
                     src={item.recipe.image}
                     alt={item.recipe.name}
@@ -368,24 +451,20 @@ export default function DashboardCommandCenter() {
                         {item.recipe.nutrition.calories} kcal
                       </span>
                     </div>
-                    <Link
-                      href={`/recipes/${item.recipe.id}`}
-                      className="text-sm font-extrabold text-brand-dark hover:text-brand-primary truncate block mt-0.5"
-                    >
+                    <p className="text-sm font-extrabold text-brand-dark hover:text-brand-primary truncate mt-0.5">
                       {item.recipe.name}
-                    </Link>
+                    </p>
                     <p className="text-[11px] text-gray-600 mt-0.5">
-                      Core Ingredients Matched: {item.ingredientMatch.fitDisplay} • FlavorDB:{" "}
-                      {item.flavorCompatibility.flavorFitLabel}
+                      Matched Core: {item.ingredientMatch.matchedCoreIngredients.join(", ") || "None"} ({item.ingredientMatch.fitDisplay})
                     </p>
                   </div>
-                </div>
+                </Link>
 
                 <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
                   <ScoreRing score={item.scoreBreakdown.totalScore} size={48} />
                   <Link
                     href={`/recipes/${item.recipe.id}`}
-                    className="px-3 py-2 rounded-xl bg-brand-dark hover:bg-brand-primary text-white text-xs font-bold transition"
+                    className="px-3.5 py-2 rounded-xl bg-brand-primary hover:bg-brand-dark text-white text-xs font-bold transition cursor-pointer"
                   >
                     View Recipe
                   </Link>
@@ -395,9 +474,9 @@ export default function DashboardCommandCenter() {
           </div>
         </section>
 
-        {/* Right: Flavor Insights Widget */}
-        <section className="lg:col-span-5 bg-white rounded-2xl border border-brand-border p-6 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="space-y-4">
+        {/* Right: Flavor Insights & Weekly Summary */}
+        <section className="lg:col-span-5 space-y-6">
+          <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-brand-primary">
@@ -415,12 +494,12 @@ export default function DashboardCommandCenter() {
               </Link>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {featuredFlavorPairs.map((pair) => (
                 <Link
                   key={`${pair.ingredientA}-${pair.ingredientB}`}
                   href="/flavor-intelligence"
-                  className="block p-3.5 rounded-xl bg-brand-surface/50 hover:bg-brand-lime/40 border border-brand-border transition space-y-1.5"
+                  className="block p-3 rounded-xl bg-brand-surface/50 hover:bg-brand-lime/40 border border-brand-border transition space-y-1 cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold text-brand-dark capitalize">
@@ -430,204 +509,70 @@ export default function DashboardCommandCenter() {
                       {pair.sharedMoleculeCount} Shared Molecules
                     </span>
                   </div>
-                  <p className="text-[11px] text-gray-600 line-clamp-2">
+                  <p className="text-[11px] text-gray-600 line-clamp-1">
                     {pair.sensoryNote}
                   </p>
-                  <div className="flex flex-wrap gap-1 pt-0.5">
-                    {pair.sharedCompounds.slice(0, 3).map((c) => (
-                      <span
-                        key={c}
-                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white border border-brand-border text-brand-primary"
-                      >
-                        {c}
-                      </span>
-                    ))}
-                  </div>
                 </Link>
               ))}
             </div>
           </div>
 
-          <div className="pt-2 border-t border-brand-border flex items-center justify-between gap-2">
-            <Link
-              href="/substitutions"
-              className="flex-1 py-2.5 px-3 rounded-xl bg-brand-surface hover:bg-brand-lime/60 text-brand-dark text-xs font-bold text-center border border-brand-border transition"
-            >
-              🔄 Smart Substitutions
-            </Link>
-            <Link
-              href="/cuisines"
-              className="flex-1 py-2.5 px-3 rounded-xl bg-brand-surface hover:bg-brand-lime/60 text-brand-dark text-xs font-bold text-center border border-brand-border transition"
-            >
-              🌍 Explore Cuisines
-            </Link>
-          </div>
-        </section>
-      </div>
-
-      {/* 5. WEEKLY NUTRITION SUMMARY + SAVED / RECENT RECIPES */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Weekly Nutrition Summary */}
-        <section className="lg:col-span-6 bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-orange-600">
-                Macro Analytics
-              </span>
-              <h2 className="text-lg font-extrabold text-brand-dark">
-                Weekly Nutrition Summary
-              </h2>
-            </div>
-            <div className="flex gap-2">
-              <Link
-                href="/nutrition"
-                className="px-3 py-1.5 rounded-xl bg-brand-surface hover:bg-brand-lime/60 text-brand-dark text-xs font-bold border border-brand-border transition"
-              >
-                Nutrition Lab →
-              </Link>
+          <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-orange-600">
+                  Planner &amp; Cookbook
+                </span>
+                <h2 className="text-base font-extrabold text-brand-dark">
+                  Weekly Nutrition &amp; Saved Status
+                </h2>
+              </div>
               <Link
                 href="/meal-planner"
-                className="px-3 py-1.5 rounded-xl bg-brand-primary text-white text-xs font-bold transition"
+                className="text-xs font-bold text-brand-primary hover:underline"
               >
                 Meal Planner →
               </Link>
             </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="p-3.5 rounded-2xl bg-brand-surface/50 border border-brand-border">
-              <span className="text-xl font-extrabold text-brand-dark block">
-                {weeklyNutrition.calories.toLocaleString()}
-              </span>
-              <span className="text-[11px] text-gray-500 font-semibold">
-                Weekly Calories (kcal)
-              </span>
-            </div>
-            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
-              <span className="text-xl font-extrabold text-emerald-800 block">
-                {weeklyNutrition.protein}g
-              </span>
-              <span className="text-[11px] text-emerald-900 font-semibold">
-                Weekly Protein
-              </span>
-            </div>
-            <div className="p-3.5 rounded-2xl bg-brand-surface/50 border border-brand-border">
-              <span className="text-xl font-extrabold text-brand-primary block">
-                {weeklyNutrition.count} Meals
-              </span>
-              <span className="text-[11px] text-gray-500 font-semibold">
-                Scheduled in Planner
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-2 pt-1">
-            <div className="flex justify-between text-xs font-bold text-brand-dark">
-              <span>Weekly Protein Goal Progress</span>
-              <span className="text-brand-primary">
-                {Math.min(100, Math.round((weeklyNutrition.protein / 220) * 100))}%
-              </span>
-            </div>
-            <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-brand-primary to-emerald-500 rounded-full"
-                style={{
-                  width: `${Math.min(100, Math.round((weeklyNutrition.protein / 220) * 100))}%`,
-                }}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Saved & Recent Cookbook Strip */}
-        <section className="lg:col-span-6 bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-red-600">
-                Personal Cookbook
-              </span>
-              <h2 className="text-lg font-extrabold text-brand-dark">
-                Saved &amp; Recent Recipes ({savedRecipeIds.length})
-              </h2>
-            </div>
-            <Link
-              href="/saved"
-              className="px-3.5 py-1.5 rounded-xl bg-brand-surface hover:bg-brand-lime/60 text-brand-dark text-xs font-bold border border-brand-border transition"
-            >
-              Open Saved Cookbook →
-            </Link>
-          </div>
-
-          {savedRecipesList.length === 0 ? (
-            <div className="p-6 rounded-xl bg-brand-surface/40 border border-brand-border text-center text-xs text-gray-600">
-              No saved recipes yet. Bookmark dishes in the{" "}
-              <Link href="/recipes" className="font-bold text-brand-primary underline">
-                Recipe Finder
+            <div className="grid grid-cols-3 gap-2.5 text-center">
+              <Link
+                href="/nutrition"
+                className="p-3 rounded-xl bg-brand-surface/60 hover:bg-brand-lime/40 border border-brand-border transition"
+              >
+                <span className="text-base font-extrabold text-brand-dark block">
+                  {weeklyNutrition.calories.toLocaleString()}
+                </span>
+                <span className="text-[10px] text-gray-500 font-semibold">
+                  Weekly kcal
+                </span>
               </Link>
-              .
+              <Link
+                href="/nutrition"
+                className="p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition"
+              >
+                <span className="text-base font-extrabold text-emerald-800 block">
+                  {weeklyNutrition.protein}g
+                </span>
+                <span className="text-[10px] text-emerald-900 font-semibold">
+                  Weekly Protein
+                </span>
+              </Link>
+              <Link
+                href="/saved"
+                className="p-3 rounded-xl bg-red-50/70 hover:bg-red-100 border border-red-200 transition"
+              >
+                <span className="text-base font-extrabold text-red-700 block">
+                  {savedRecipesList.length}
+                </span>
+                <span className="text-[10px] text-red-800 font-semibold">
+                  Saved Recipes
+                </span>
+              </Link>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {savedRecipesList.map((rec) => (
-                <Link
-                  key={rec.id}
-                  href={`/recipes/${rec.id}`}
-                  className="group rounded-xl border border-brand-border overflow-hidden bg-brand-surface/30 hover:bg-white hover:shadow-xs transition"
-                >
-                  <img
-                    src={rec.image}
-                    alt={rec.name}
-                    className="w-full h-24 object-cover group-hover:scale-105 transition-transform"
-                  />
-                  <div className="p-2.5">
-                    <p className="text-xs font-extrabold text-brand-dark truncate">
-                      {rec.name}
-                    </p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">
-                      {rec.cuisine} • {rec.cookingTimeMinutes}m
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+          </div>
         </section>
       </div>
-
-      {/* 6. JUDGE QUICK DEMO BAR (Navigates directly to /recipes with preset loaded) */}
-      <section className="bg-white rounded-2xl border border-brand-border p-5 shadow-2xs space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <span className="text-xs font-extrabold text-brand-dark flex items-center gap-1.5">
-            <Play className="w-4 h-4 text-brand-primary" />
-            Judge One-Click Live Demo Scenarios (Loads Pantry &amp; Opens Recipe Finder):
-          </span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {JUDGE_DEMO_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={async () => {
-                await applyDemoPreset(preset);
-                router.push("/recipes");
-              }}
-              className="text-left p-3.5 rounded-xl border border-brand-border bg-brand-surface/40 hover:bg-brand-lime/50 hover:border-brand-primary transition"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-brand-dark">
-                  {preset.label}
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-dark text-brand-lime">
-                  {preset.badge}
-                </span>
-              </div>
-              <p className="text-[11px] text-gray-600 mt-1 line-clamp-1">
-                {preset.description}
-              </p>
-            </button>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }

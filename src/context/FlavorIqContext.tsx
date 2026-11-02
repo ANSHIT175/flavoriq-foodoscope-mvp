@@ -6,6 +6,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import {
   CalorieRangeOption,
@@ -74,7 +75,7 @@ export const JUDGE_DEMO_PRESETS: DemoPreset[] = [
     id: "north-indian-paneer",
     label: "North Indian Paneer Pantry",
     badge: "93/100 Top Match",
-    description: "Paneer, Tomato, Onion, Capsicum, Garlic & Ginger • Spicy • Under 30m",
+    description: "Paneer, Tomato, Onion, Capsicum, Garlic & Ginger • Indian • Spicy • Under 30m",
     context: {
       ingredients: ["Paneer", "Tomato", "Onion", "Capsicum", "Garlic", "Ginger"],
       cuisine: "Indian",
@@ -90,7 +91,7 @@ export const JUDGE_DEMO_PRESETS: DemoPreset[] = [
     id: "comfort-dal-rice",
     label: "Comfort Dal & Jeera Rice",
     badge: "Vegan + High Fiber",
-    description: "Dal, Basmati Rice, Tomato, Onion, Cumin & Garlic • Savory • Vegan",
+    description: "Dal, Basmati Rice, Tomato, Onion, Cumin & Garlic • Indian • Savory • Vegan",
     context: {
       ingredients: ["Dal", "Rice", "Tomato", "Onion", "Cumin", "Garlic"],
       cuisine: "Indian",
@@ -106,7 +107,7 @@ export const JUDGE_DEMO_PRESETS: DemoPreset[] = [
     id: "italian-pasta-night",
     label: "Quick Italian Pasta Night",
     badge: "20-Min Skillet",
-    description: "Pasta, Tomato, Garlic, Capsicum & Spinach • Tangy • Under 30m",
+    description: "Pasta, Tomato, Garlic, Capsicum & Spinach • Italian • Tangy • Under 30m",
     context: {
       ingredients: ["Pasta", "Tomato", "Garlic", "Capsicum", "Spinach"],
       cuisine: "Italian",
@@ -122,7 +123,7 @@ export const JUDGE_DEMO_PRESETS: DemoPreset[] = [
     id: "ginger-tofu-wok",
     label: "15-Min Ginger Tofu Wok",
     badge: "High Protein Wok",
-    description: "Tofu, Capsicum, Ginger, Garlic & Onion • Spicy • Under 15m",
+    description: "Tofu, Capsicum, Ginger, Garlic & Onion • Chinese • Spicy • Under 15m",
     context: {
       ingredients: ["Tofu", "Capsicum", "Ginger", "Garlic", "Onion"],
       cuisine: "Chinese",
@@ -168,6 +169,7 @@ interface FlavorIqContextValue {
   calorieRange: CalorieRangeOption;
   proteinLevel: ProteinLevelOption;
   allowAdditionalIngredients: boolean;
+  activePresetId: string | null;
 
   setCuisine: (v: CuisineOption) => void;
   setTaste: (v: TasteOption) => void;
@@ -204,6 +206,7 @@ interface FlavorIqContextValue {
   clearCompare: () => void;
 
   groceryItems: GroceryItem[];
+  groceryAddedRecipeIds: string[];
   addMissingIngredientsToGrocery: (recipe: NormalizedRecipe) => void;
   addSingleGroceryItem: (name: string, quantity?: string, fromRecipeName?: string) => void;
   toggleGroceryItem: (id: string) => void;
@@ -211,6 +214,7 @@ interface FlavorIqContextValue {
   clearGroceryList: () => void;
 
   mealPlan: WeeklyMealPlan;
+  isRecipeInMealPlan: (recipeId: string) => boolean;
   assignRecipeToMealPlan: (day: DayOfWeek, slot: MealSlotType, recipeId: string) => void;
   quickAddToMealPlan: (recipeId: string) => void;
   removeRecipeFromMealPlan: (day: DayOfWeek, slot: MealSlotType) => void;
@@ -249,16 +253,19 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
     "Tofu",
     "Chickpeas",
   ]);
-  const [cuisine, setCuisine] = useState<CuisineOption>("Indian");
-  const [taste, setTaste] = useState<TasteOption>("Spicy");
-  const [maxCookingTime, setMaxCookingTime] =
+  const [cuisine, setCuisineState] = useState<CuisineOption>("Indian");
+  const [taste, setTasteState] = useState<TasteOption>("Spicy");
+  const [maxCookingTime, setMaxCookingTimeState] =
     useState<CookingTimeOption>("Under 30 min");
-  const [dietaryPreference, setDietaryPreference] =
+  const [dietaryPreference, setDietaryPreferenceState] =
     useState<DietaryOption>("Vegetarian");
-  const [calorieRange, setCalorieRange] = useState<CalorieRangeOption>("Any");
-  const [proteinLevel, setProteinLevel] = useState<ProteinLevelOption>("Any");
-  const [allowAdditionalIngredients, setAllowAdditionalIngredients] =
+  const [calorieRange, setCalorieRangeState] = useState<CalorieRangeOption>("Any");
+  const [proteinLevel, setProteinLevelState] = useState<ProteinLevelOption>("Any");
+  const [allowAdditionalIngredients, setAllowAdditionalIngredientsState] =
     useState<boolean>(true);
+  const [activePresetId, setActivePresetId] = useState<string | null>(
+    "north-indian-paneer"
+  );
 
   const [rankedResults, setRankedResults] = useState<RankedRecipeResult[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -281,6 +288,7 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
     "fiq-rec-02",
     "fiq-rec-08",
   ]);
+  const [groceryAddedRecipeIds, setGroceryAddedRecipeIds] = useState<string[]>([]);
   const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([
     {
       id: "groc-init-1",
@@ -327,7 +335,7 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
       setToasts((prev) => [...prev.slice(-3), { id, title, description, type }]);
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
-      }, 3600);
+      }, 3200);
     },
     []
   );
@@ -391,58 +399,45 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
       };
 
       if (payload.ingredients.length === 0) {
+        setRankedResults([]);
         setError("Add at least one pantry ingredient to compute recommendations.");
         return;
       }
 
-      setLoading(true);
       setError(null);
-      setLoadingStage("Analyzing your pantry...");
 
-      const t1 = setTimeout(
-        () => setLoadingStage("Checking flavor compatibility..."),
-        180
+      // 1. Immediately compute deterministic client-side scores so UI updates with zero lag
+      const instantRanked = await scoreAndRankRecipes(
+        DEVELOPMENT_RECIPES,
+        payload
       );
-      const t2 = setTimeout(
-        () => setLoadingStage("Calculating personalized scores..."),
-        360
-      );
+      setRankedResults(instantRanked);
+      setTotalCandidatesEvaluated(DEVELOPMENT_RECIPES.length);
 
+      // 2. Also sync with server /api/recommend endpoint in background
       try {
         const res = await fetch("/api/recommend", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const data = await res.json();
-        if (!res.ok) {
-          // Fallback to client-side deterministic engine if server route errors
-          const localRanked = await scoreAndRankRecipes(
-            DEVELOPMENT_RECIPES,
-            payload
-          );
-          setRankedResults(localRanked);
-          setError(data.error || null);
-        } else {
-          setRankedResults(data.results || []);
-          setModeUsed(data.mode || "mock");
-          setScoreLabel(
-            data.scoreLabel ||
-              "Illustrative Match Score (Calculated via MVP Engine on Dev Dataset)"
-          );
-          setTotalCandidatesEvaluated(
-            data.totalCandidatesEvaluated || DEVELOPMENT_RECIPES.length
-          );
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.results) && data.results.length > 0) {
+            setRankedResults(data.results);
+            setModeUsed(data.mode || "mock");
+            setScoreLabel(
+              data.scoreLabel ||
+                "Illustrative Match Score (Calculated via MVP Engine on Dev Dataset)"
+            );
+            setTotalCandidatesEvaluated(
+              data.totalCandidatesEvaluated || DEVELOPMENT_RECIPES.length
+            );
+          }
         }
       } catch {
-        const localRanked = await scoreAndRankRecipes(
-          DEVELOPMENT_RECIPES,
-          payload
-        );
-        setRankedResults(localRanked);
+        // Keep deterministic client calculation if offline
       } finally {
-        clearTimeout(t1);
-        clearTimeout(t2);
         setLoading(false);
       }
     },
@@ -458,46 +453,82 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
     ]
   );
 
-  // Initial calculation on mount and whenever context changes
+  // Recalculate whenever any pantry ingredient or filter changes
   useEffect(() => {
     computeRecommendations();
   }, [computeRecommendations]);
+
+  const setCuisine = useCallback((v: CuisineOption) => {
+    setActivePresetId(null);
+    setCuisineState(v);
+  }, []);
+
+  const setTaste = useCallback((v: TasteOption) => {
+    setActivePresetId(null);
+    setTasteState(v);
+  }, []);
+
+  const setMaxCookingTime = useCallback((v: CookingTimeOption) => {
+    setActivePresetId(null);
+    setMaxCookingTimeState(v);
+  }, []);
+
+  const setDietaryPreference = useCallback((v: DietaryOption) => {
+    setActivePresetId(null);
+    setDietaryPreferenceState(v);
+  }, []);
+
+  const setCalorieRange = useCallback((v: CalorieRangeOption) => {
+    setActivePresetId(null);
+    setCalorieRangeState(v);
+  }, []);
+
+  const setProteinLevel = useCallback((v: ProteinLevelOption) => {
+    setActivePresetId(null);
+    setProteinLevelState(v);
+  }, []);
+
+  const setAllowAdditionalIngredients = useCallback((v: boolean) => {
+    setAllowAdditionalIngredientsState(v);
+  }, []);
 
   const addIngredient = useCallback(
     (raw: string) => {
       const cleaned = raw.trim();
       if (!cleaned) return;
       const canon = normalizeIngredientName(cleaned);
-      if (
-        ingredients.some((i) => normalizeIngredientName(i) === canon)
-      ) {
+      if (ingredients.some((i) => normalizeIngredientName(i) === canon)) {
         showToast("Already in Pantry", `${cleaned} is already in your kitchen list.`, "info");
         return;
       }
+      setActivePresetId(null);
       setIngredients((prev) => [...prev, cleaned]);
       setRecentIngredients((prev) =>
         [cleaned, ...prev.filter((x) => normalizeIngredientName(x) !== canon)].slice(0, 8)
       );
-      showToast("Ingredient Added", `Added ${cleaned} to your kitchen pantry.`);
+      showToast("Ingredient Added", `Added ${cleaned} — scores recalculated.`);
     },
     [ingredients, showToast]
   );
 
   const removeIngredient = useCallback(
     (target: string) => {
+      setActivePresetId(null);
       setIngredients((prev) => prev.filter((item) => item !== target));
-      showToast("Ingredient Removed", `Removed ${target} from your pantry.`, "info");
+      showToast("Ingredient Removed", `Removed ${target} — scores recalculated.`, "info");
     },
     [showToast]
   );
 
   const clearIngredients = useCallback(() => {
+    setActivePresetId(null);
     setIngredients([]);
     showToast("Pantry Cleared", "Add ingredients or click 'Use my current pantry' to restore.", "info");
   }, [showToast]);
 
   const restoreDefaultPantry = useCallback(() => {
     const defaults = ["Paneer", "Tomato", "Onion", "Capsicum", "Spinach", "Garlic", "Ginger", "Cumin"];
+    setActivePresetId("north-indian-paneer");
     setIngredients(defaults);
     showToast("Pantry Restored", "Loaded 8 kitchen staples into your active pantry.");
   }, [showToast]);
@@ -505,16 +536,21 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
   const applySubstituteToPantry = useCallback(
     (targetIng: string, substituteIng: string) => {
       const targetCanon = normalizeIngredientName(targetIng);
+      setActivePresetId(null);
       setIngredients((prev) => {
         const filtered = prev.filter((i) => normalizeIngredientName(i) !== targetCanon);
-        if (!filtered.some((i) => normalizeIngredientName(i) === normalizeIngredientName(substituteIng))) {
+        if (
+          !filtered.some(
+            (i) => normalizeIngredientName(i) === normalizeIngredientName(substituteIng)
+          )
+        ) {
           return [...filtered, substituteIng];
         }
         return filtered;
       });
       showToast(
-        "Smart Substitute Applied",
-        `Swapped ${targetIng} → ${substituteIng} in your active cooking context.`
+        "Substitute Applied!",
+        `Swapped ${targetIng} → ${substituteIng} in your pantry & recalculated scores.`
       );
     },
     [showToast]
@@ -522,18 +558,19 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
 
   const applyDemoPreset = useCallback(
     async (preset: DemoPreset) => {
+      setActivePresetId(preset.id);
       setIngredients(preset.context.ingredients);
-      setCuisine(preset.context.cuisine);
-      setTaste(preset.context.taste);
-      setMaxCookingTime(preset.context.maxCookingTime);
-      setDietaryPreference(preset.context.dietaryPreference);
-      setCalorieRange(preset.context.calorieRange || "Any");
-      setProteinLevel(preset.context.proteinLevel || "Any");
-      setAllowAdditionalIngredients(true);
+      setCuisineState(preset.context.cuisine);
+      setTasteState(preset.context.taste);
+      setMaxCookingTimeState(preset.context.maxCookingTime);
+      setDietaryPreferenceState(preset.context.dietaryPreference);
+      setCalorieRangeState(preset.context.calorieRange || "Any");
+      setProteinLevelState(preset.context.proteinLevel || "Any");
+      setAllowAdditionalIngredientsState(true);
       await computeRecommendations(preset.context);
       showToast(
-        `Demo Loaded: ${preset.label}`,
-        "Pantry & preferences updated and scores recalculated."
+        `Demo Preset Active: ${preset.label}`,
+        `Pantry (${preset.context.ingredients.length} items), ${preset.context.cuisine} cuisine & match scores updated!`
       );
     },
     [computeRecommendations, showToast]
@@ -548,7 +585,7 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
           showToast("Removed from Saved", `${rec?.name || "Recipe"} removed from Saved Recipes.`, "info");
           return prev.filter((id) => id !== recipeId);
         } else {
-          showToast("Recipe Saved!", `${rec?.name || "Recipe"} saved to your collection.`);
+          showToast("Saved", `${rec?.name || "Recipe"} added to Saved Recipes.`);
           return [...prev, recipeId];
         }
       });
@@ -566,18 +603,18 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
       const rec = DEVELOPMENT_RECIPES.find((r) => r.id === recipeId);
       setCompareRecipeIds((prev) => {
         if (prev.includes(recipeId)) {
-          showToast("Removed from Comparison", `${rec?.name || "Recipe"} removed from compare slot.`, "info");
+          showToast("Removed from Compare", `${rec?.name || "Recipe"} removed from comparison slot.`, "info");
           return prev.filter((id) => id !== recipeId);
         }
         if (prev.length >= 3) {
           showToast(
-            "Comparison Replaced Oldest",
-            `Comparing ${rec?.name || "Recipe"} (max 3 recipes at once).`,
+            "Added to Compare",
+            `${rec?.name || "Recipe"} added to comparison (max 3 slots).`,
             "info"
           );
           return [...prev.slice(1), recipeId];
         }
-        showToast("Added to Compare", `${rec?.name || "Recipe"} added to comparison table.`);
+        showToast("Added to Compare", `${rec?.name || "Recipe"} added to Compare Recipes.`);
         return [...prev, recipeId];
       });
     },
@@ -591,7 +628,7 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
 
   const clearCompare = useCallback(() => {
     setCompareRecipeIds([]);
-    showToast("Comparison Cleared", "Select up to 3 recipes to compare side-by-side.", "info");
+    showToast("Comparison Cleared", "All 3 comparison slots cleared.", "info");
   }, [showToast]);
 
   const addMissingIngredientsToGrocery = useCallback(
@@ -601,19 +638,16 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
         (ing) => !userCanons.has(ing.canonicalName)
       );
 
-      if (missing.length === 0) {
-        showToast(
-          "All Ingredients in Pantry!",
-          `You already have every ingredient for ${recipe.name}.`,
-          "info"
-        );
-        return;
-      }
+      setGroceryAddedRecipeIds((prev) =>
+        prev.includes(recipe.id) ? prev : [...prev, recipe.id]
+      );
+
+      const itemsToAdd = missing.length > 0 ? missing : recipe.ingredients.slice(0, 2);
 
       setGroceryItems((prev) => {
         const existingCanons = new Set(prev.map((g) => g.canonicalName));
         const newItems: GroceryItem[] = [];
-        for (const m of missing) {
+        for (const m of itemsToAdd) {
           if (!existingCanons.has(m.canonicalName)) {
             newItems.push({
               id: `groc-${Date.now()}-${m.canonicalName}`,
@@ -630,8 +664,10 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
       });
 
       showToast(
-        "Added to Smart Grocery List",
-        `${missing.length} missing ingredient(s) for ${recipe.name} added.`
+        "Added to Grocery List",
+        missing.length > 0
+          ? `${missing.length} missing ingredient(s) for ${recipe.name} added to Grocery Planner.`
+          : `Added ${recipe.name} essentials to Grocery Planner.`
       );
     },
     [ingredients, showToast]
@@ -657,7 +693,7 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
           },
         ];
       });
-      showToast("Grocery Item Added", `${cleaned} added to your shopping list.`);
+      showToast("Added to Grocery List", `${cleaned} added to your shopping list.`);
     },
     [showToast]
   );
@@ -676,8 +712,21 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
 
   const clearGroceryList = useCallback(() => {
     setGroceryItems([]);
+    setGroceryAddedRecipeIds([]);
     showToast("Grocery List Cleared", "Removed all items from your shopping list.", "info");
   }, [showToast]);
+
+  const isRecipeInMealPlan = useCallback(
+    (recipeId: string) => {
+      for (const d of DAYS_OF_WEEK) {
+        for (const s of MEAL_SLOTS) {
+          if (mealPlan[d]?.[s] === recipeId) return true;
+        }
+      }
+      return false;
+    },
+    [mealPlan]
+  );
 
   const assignRecipeToMealPlan = useCallback(
     (day: DayOfWeek, slot: MealSlotType, recipeId: string) => {
@@ -690,8 +739,8 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
         },
       }));
       showToast(
-        "Scheduled in Meal Planner",
-        `Added ${rec?.name || "Recipe"} to ${day} ${slot}.`
+        "Added to Meal Plan",
+        `Scheduled ${rec?.name || "Recipe"} for ${day} ${slot}.`
       );
     },
     [showToast]
@@ -787,17 +836,19 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
       const matchedCore = core.filter((i) => userCanon.has(i.canonicalName)).map((i) => i.name);
       const missingCore = core.filter((i) => !userCanon.has(i.canonicalName)).map((i) => i.name);
       const ingScore = Math.round((matchedCore.length / Math.max(1, core.length)) * 30);
+      const cScore = cuisine === "Any" || raw.cuisine === cuisine ? 15 : 0;
+      const tScore = taste === "Any" || raw.tasteProfile.includes(taste) ? 10 : 2;
       return {
         recipe: raw,
         scoreBreakdown: {
           ingredientCoverage: ingScore,
           flavorCompatibility: 20,
-          cuisineFit: cuisine === "Any" || raw.cuisine === cuisine ? 15 : 8,
-          tasteFit: taste === "Any" || raw.tasteProfile.includes(taste) ? 10 : 6,
-          preferenceFitCombined: 20,
+          cuisineFit: cScore,
+          tasteFit: tScore,
+          preferenceFitCombined: cScore + tScore,
           timeFit: 9,
           dietaryFit: 10,
-          totalScore: Math.min(100, ingScore + 20 + 15 + 10 + 9 + 10),
+          totalScore: Math.min(100, ingScore + 20 + cScore + tScore + 9 + 10),
         },
         ingredientMatch: {
           matchedCoreIngredients: matchedCore,
@@ -820,7 +871,7 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
           ],
         },
         explanations: {
-          ingredientFitText: `Uses ${matchedCore.length} of ${core.length} core recipe ingredients.`,
+          ingredientFitText: `Uses ${matchedCore.length} of ${core.length} core recipe ingredients (${matchedCore.join(", ") || "none matched"}).`,
           flavorCompatibilityText: "Strong molecular pairing compatibility across core aromatics.",
           preferenceFitText: `Matches ${raw.cuisine} culinary profile and ${raw.tasteProfile.join(", ").toLowerCase()} notes.`,
           timeFitText: `Ready in ~${raw.cookingTimeMinutes} minutes.`,
@@ -831,69 +882,134 @@ export function FlavorIqProvider({ children }: { children: React.ReactNode }) {
     [rankedResults, ingredients, cuisine, taste]
   );
 
+  const ctxValue = useMemo(
+    () => ({
+      ingredients,
+      recentIngredients,
+      cuisine,
+      taste,
+      maxCookingTime,
+      dietaryPreference,
+      calorieRange,
+      proteinLevel,
+      allowAdditionalIngredients,
+      activePresetId,
+      setCuisine,
+      setTaste,
+      setMaxCookingTime,
+      setDietaryPreference,
+      setCalorieRange,
+      setProteinLevel,
+      setAllowAdditionalIngredients,
+      addIngredient,
+      removeIngredient,
+      clearIngredients,
+      restoreDefaultPantry,
+      applySubstituteToPantry,
+      rankedResults,
+      allRecipes: DEVELOPMENT_RECIPES,
+      loading,
+      loadingStage,
+      error,
+      modeUsed,
+      scoreLabel,
+      totalCandidatesEvaluated,
+      computeRecommendations,
+      applyDemoPreset,
+      savedRecipeIds,
+      toggleSaveRecipe,
+      isRecipeSaved,
+      compareRecipeIds,
+      toggleCompareRecipe,
+      isRecipeCompared,
+      clearCompare,
+      groceryItems,
+      groceryAddedRecipeIds,
+      addMissingIngredientsToGrocery,
+      addSingleGroceryItem,
+      toggleGroceryItem,
+      removeGroceryItem,
+      clearGroceryList,
+      mealPlan,
+      isRecipeInMealPlan,
+      assignRecipeToMealPlan,
+      quickAddToMealPlan,
+      removeRecipeFromMealPlan,
+      swapMealInPlan,
+      autoPopulateMealPlan,
+      selectedNutritionRecipeId,
+      setSelectedNutritionRecipeId,
+      selectedSubstitutionIngredient,
+      setSelectedSubstitutionIngredient,
+      toasts,
+      showToast,
+      dismissToast,
+      getRankedOrEvaluatedRecipe,
+    }),
+    [
+      ingredients,
+      recentIngredients,
+      cuisine,
+      taste,
+      maxCookingTime,
+      dietaryPreference,
+      calorieRange,
+      proteinLevel,
+      allowAdditionalIngredients,
+      activePresetId,
+      setCuisine,
+      setTaste,
+      setMaxCookingTime,
+      setDietaryPreference,
+      setCalorieRange,
+      setProteinLevel,
+      setAllowAdditionalIngredients,
+      addIngredient,
+      removeIngredient,
+      clearIngredients,
+      restoreDefaultPantry,
+      applySubstituteToPantry,
+      rankedResults,
+      loading,
+      loadingStage,
+      error,
+      modeUsed,
+      scoreLabel,
+      totalCandidatesEvaluated,
+      computeRecommendations,
+      applyDemoPreset,
+      savedRecipeIds,
+      toggleSaveRecipe,
+      isRecipeSaved,
+      compareRecipeIds,
+      toggleCompareRecipe,
+      isRecipeCompared,
+      clearCompare,
+      groceryItems,
+      groceryAddedRecipeIds,
+      addMissingIngredientsToGrocery,
+      addSingleGroceryItem,
+      toggleGroceryItem,
+      removeGroceryItem,
+      clearGroceryList,
+      mealPlan,
+      isRecipeInMealPlan,
+      assignRecipeToMealPlan,
+      quickAddToMealPlan,
+      removeRecipeFromMealPlan,
+      swapMealInPlan,
+      autoPopulateMealPlan,
+      selectedNutritionRecipeId,
+      selectedSubstitutionIngredient,
+      toasts,
+      showToast,
+      dismissToast,
+      getRankedOrEvaluatedRecipe,
+    ]
+  );
+
   return (
-    <FlavorIqContext.Provider
-      value={{
-        ingredients,
-        recentIngredients,
-        cuisine,
-        taste,
-        maxCookingTime,
-        dietaryPreference,
-        calorieRange,
-        proteinLevel,
-        allowAdditionalIngredients,
-        setCuisine,
-        setTaste,
-        setMaxCookingTime,
-        setDietaryPreference,
-        setCalorieRange,
-        setProteinLevel,
-        setAllowAdditionalIngredients,
-        addIngredient,
-        removeIngredient,
-        clearIngredients,
-        restoreDefaultPantry,
-        applySubstituteToPantry,
-        rankedResults,
-        allRecipes: DEVELOPMENT_RECIPES,
-        loading,
-        loadingStage,
-        error,
-        modeUsed,
-        scoreLabel,
-        totalCandidatesEvaluated,
-        computeRecommendations,
-        applyDemoPreset,
-        savedRecipeIds,
-        toggleSaveRecipe,
-        isRecipeSaved,
-        compareRecipeIds,
-        toggleCompareRecipe,
-        isRecipeCompared,
-        clearCompare,
-        groceryItems,
-        addMissingIngredientsToGrocery,
-        addSingleGroceryItem,
-        toggleGroceryItem,
-        removeGroceryItem,
-        clearGroceryList,
-        mealPlan,
-        assignRecipeToMealPlan,
-        quickAddToMealPlan,
-        removeRecipeFromMealPlan,
-        swapMealInPlan,
-        autoPopulateMealPlan,
-        selectedNutritionRecipeId,
-        setSelectedNutritionRecipeId,
-        selectedSubstitutionIngredient,
-        setSelectedSubstitutionIngredient,
-        toasts,
-        showToast,
-        dismissToast,
-        getRankedOrEvaluatedRecipe,
-      }}
-    >
+    <FlavorIqContext.Provider value={ctxValue}>
       {children}
     </FlavorIqContext.Provider>
   );
