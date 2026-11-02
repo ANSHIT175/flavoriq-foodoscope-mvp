@@ -1,7 +1,9 @@
 import {
   CuisineOption,
   DietaryOption,
+  IngredientCategory,
   NormalizedRecipe,
+  PantryCatalogItem,
   RecipeIngredient,
   TasteOption,
 } from "./types";
@@ -14,22 +16,64 @@ export const INGREDIENT_SYNONYM_GROUPS: Record<string, string[]> = {
   ],
   paneer: ["paneer", "cottage cheese", "indian cottage cheese", "chenna", "chhena"],
   tomato: ["tomato", "tomatoes", "tamatar", "tomato puree", "crushed tomatoes", "cherry tomatoes"],
-  onion: ["onion", "onions", "pyaaz", "pyaz", "red onion", "white onion", "shallots", "spring onion"],
+  onion: ["onion", "onions", "pyaaz", "pyaz", "red onion", "white onion", "shallots", "spring onion", "scallions"],
   capsicum: ["capsicum", "bell pepper", "bell peppers", "shimla mirch", "green pepper", "red bell pepper", "peppers"],
   potato: ["potato", "potatoes", "aloo", "alu", "baby potatoes", "boiled potato"],
-  rice: ["rice", "chawal", "basmati rice", "basmati", "cooked rice", "white rice", "brown rice"],
+  rice: ["rice", "chawal", "basmati rice", "basmati", "cooked rice", "white rice", "brown rice", "jasmine rice", "sushi rice"],
   spinach: ["spinach", "palak", "baby spinach", "saag", "leafy greens"],
   garlic: ["garlic", "lahsun", "lehsun", "garlic cloves", "minced garlic"],
-  ginger: ["ginger", "adrak", "fresh ginger", "ginger juliennes"],
-  "green chili": ["green chili", "green chilli", "green chilies", "hari mirch", "chili", "chilli", "jalapeno"],
+  ginger: ["ginger", "adrak", "fresh ginger", "ginger juliennes", "galangal"],
+  "green chili": ["green chili", "green chilli", "green chilies", "hari mirch", "chili", "chilli", "jalapeno", "thai chili", "serrano"],
   coriander: ["coriander", "cilantro", "dhania", "coriander leaves", "coriander seeds"],
-  cumin: ["cumin", "jeera", "cumin seeds", "roasted cumin"],
-  pasta: ["pasta", "penne", "spaghetti", "macaroni", "fusilli", "noodles"],
+  cumin: ["cumin", "jeera", "cumin seeds", "roasted cumin", "ground cumin"],
+  pasta: ["pasta", "penne", "spaghetti", "macaroni", "fusilli", "fettuccine"],
+  noodles: ["noodles", "ramen", "udon", "rice noodles", "hakka noodles", "soba"],
   chickpeas: ["chickpeas", "chickpea", "chana", "chole", "kabuli chana", "garbanzo", "garbanzo beans"],
-  mushroom: ["mushroom", "mushrooms", "button mushroom", "cremini"],
-  tofu: ["tofu", "bean curd", "firm tofu", "soya paneer"],
+  mushroom: ["mushroom", "mushrooms", "button mushroom", "cremini", "shiitake", "portobello"],
+  tofu: ["tofu", "bean curd", "firm tofu", "silken tofu", "soya paneer"],
   "black beans": ["black beans", "beans", "kidney beans", "rajma", "pinto beans"],
+  "coconut milk": ["coconut milk", "coconut cream", "nariyal doodh"],
+  lemon: ["lemon", "lime", "nimbu", "lemon juice", "lime juice", "citrus"],
+  basil: ["basil", "thai basil", "sweet basil", "tulsi"],
+  avocado: ["avocado", "guacamole"],
+  "olive oil": ["olive oil", "extra virgin olive oil"],
+  "soy sauce": ["soy sauce", "tamari", "shoyu"],
+  "sesame": ["sesame", "sesame oil", "sesame seeds", "tahini", "til"],
+  edamame: ["edamame", "green soybeans", "soybeans"],
+  eggplant: ["eggplant", "baingan", "aubergine", "brinjal"],
+  yogurt: ["yogurt", "curd", "dahi", "greek yogurt"],
 };
+
+export const PANTRY_INGREDIENT_CATALOG: PantryCatalogItem[] = [
+  { name: "Paneer", canonicalName: "paneer", category: "Dairy", popular: true },
+  { name: "Tomato", canonicalName: "tomato", category: "Vegetables", popular: true },
+  { name: "Spinach (Palak)", canonicalName: "spinach", category: "Vegetables", popular: true },
+  { name: "Onion", canonicalName: "onion", category: "Vegetables", popular: true },
+  { name: "Garlic", canonicalName: "garlic", category: "Spices", popular: true },
+  { name: "Ginger", canonicalName: "ginger", category: "Spices", popular: true },
+  { name: "Capsicum", canonicalName: "capsicum", category: "Vegetables", popular: true },
+  { name: "Potato", canonicalName: "potato", category: "Vegetables", popular: true },
+  { name: "Basmati Rice", canonicalName: "rice", category: "Grains", popular: true },
+  { name: "Yellow Dal", canonicalName: "dal", category: "Protein", popular: true },
+  { name: "Pasta", canonicalName: "pasta", category: "Grains", popular: true },
+  { name: "Mushroom", canonicalName: "mushroom", category: "Vegetables", popular: true },
+  { name: "Chickpeas", canonicalName: "chickpeas", category: "Protein", popular: true },
+  { name: "Coriander", canonicalName: "coriander", category: "Herbs", popular: true },
+  { name: "Firm Tofu", canonicalName: "tofu", category: "Protein", popular: true },
+  { name: "Cumin (Jeera)", canonicalName: "cumin", category: "Spices", popular: true },
+  { name: "Green Chili", canonicalName: "green chili", category: "Spices", popular: false },
+  { name: "Black Beans", canonicalName: "black beans", category: "Protein", popular: false },
+  { name: "Noodles", canonicalName: "noodles", category: "Grains", popular: false },
+  { name: "Coconut Milk", canonicalName: "coconut milk", category: "Other", popular: false },
+  { name: "Lemon / Lime", canonicalName: "lemon", category: "Vegetables", popular: false },
+  { name: "Fresh Basil", canonicalName: "basil", category: "Herbs", popular: false },
+  { name: "Avocado", canonicalName: "avocado", category: "Vegetables", popular: false },
+  { name: "Olive Oil", canonicalName: "olive oil", category: "Other", popular: false },
+  { name: "Soy Sauce", canonicalName: "soy sauce", category: "Other", popular: false },
+  { name: "Sesame / Tahini", canonicalName: "sesame", category: "Spices", popular: false },
+  { name: "Edamame", canonicalName: "edamame", category: "Protein", popular: false },
+  { name: "Greek Yogurt (Dahi)", canonicalName: "yogurt", category: "Dairy", popular: false },
+];
 
 const ALIAS_TO_CANONICAL: Record<string, string> = {};
 for (const [canon, aliases] of Object.entries(INGREDIENT_SYNONYM_GROUPS)) {
@@ -41,7 +85,12 @@ for (const [canon, aliases] of Object.entries(INGREDIENT_SYNONYM_GROUPS)) {
 
 export function normalizeIngredientName(raw: string): string {
   if (!raw) return "";
-  const cleaned = String(raw).trim().toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, " ");
+  const cleaned = String(raw)
+    .replace(/\([^)]*\)/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, " ");
   if (!cleaned) return "";
   if (ALIAS_TO_CANONICAL[cleaned]) return ALIAS_TO_CANONICAL[cleaned];
   if (cleaned.endsWith("es") && ALIAS_TO_CANONICAL[cleaned.slice(0, -2)]) {
@@ -56,6 +105,21 @@ export function normalizeIngredientName(raw: string): string {
   return cleaned;
 }
 
+export function getIngredientCategory(nameOrCanon: string): IngredientCategory {
+  const canon = normalizeIngredientName(nameOrCanon);
+  const found = PANTRY_INGREDIENT_CATALOG.find((item) => item.canonicalName === canon);
+  if (found) return found.category;
+  if (["paneer", "yogurt", "cheese", "butter", "cream"].includes(canon)) return "Dairy";
+  if (["tofu", "dal", "chickpeas", "black beans", "edamame", "tempeh"].includes(canon)) return "Protein";
+  if (["rice", "pasta", "noodles", "quinoa", "bread"].includes(canon)) return "Grains";
+  if (["cumin", "garlic", "ginger", "green chili", "sesame", "turmeric"].includes(canon)) return "Spices";
+  if (["coriander", "basil", "mint", "parsley"].includes(canon)) return "Herbs";
+  if (["tomato", "onion", "spinach", "capsicum", "potato", "mushroom", "lemon", "avocado"].includes(canon)) {
+    return "Vegetables";
+  }
+  return "Other";
+}
+
 export function isIngredientMatch(userRawOrCanon: string, recipeIng: RecipeIngredient): boolean {
   const uCanon = normalizeIngredientName(userRawOrCanon);
   if (!uCanon) return false;
@@ -68,30 +132,33 @@ export function isIngredientMatch(userRawOrCanon: string, recipeIng: RecipeIngre
 
 const VALID_CUISINES: Exclude<CuisineOption, "Any">[] = [
   "Indian",
+  "Chinese",
   "Italian",
   "Mexican",
-  "Chinese",
+  "Thai",
+  "Japanese",
+  "Mediterranean",
   "Continental",
 ];
 
 const VALID_TASTES: Exclude<TasteOption, "Any">[] = [
   "Spicy",
-  "Mild",
-  "Sweet",
   "Savory",
   "Tangy",
+  "Sweet",
+  "Mild",
+  "Balanced",
 ];
 
 const VALID_DIETARY: Exclude<DietaryOption, "No preference">[] = [
   "Vegetarian",
   "Vegan",
+  "High-protein",
   "Low-oil",
   "Gluten-free",
+  "Dairy-free",
 ];
 
-/**
- * Normalizes raw RecipeDB API records into FLAVORIQ's internal NormalizedRecipe schema.
- */
 export function mapRawRecipeDbRecord(
   raw: Record<string, any>,
   index: number = 0
@@ -123,7 +190,7 @@ export function mapRawRecipeDbRecord(
       name,
       canonicalName,
       quantity: String(ing?.quantity || ing?.phrase || "as needed"),
-      category: String(ing?.category || "Produce & Pantry"),
+      category: getIngredientCategory(canonicalName),
       isCore: typeof ing?.isCore === "boolean" ? ing.isCore : idx < 4,
     };
   });
@@ -145,15 +212,16 @@ export function mapRawRecipeDbRecord(
       : ["pan", "spatula"],
     nutrition: {
       calories: Number(raw?.nutrition?.calories || raw?.Calories || 320),
-      proteinG: Number(raw?.nutrition?.proteinG || raw?.Protein || 12),
+      proteinG: Number(raw?.nutrition?.proteinG || raw?.Protein || 14),
       carbsG: Number(raw?.nutrition?.carbsG || raw?.Carbohydrate || 34),
-      fatG: Number(raw?.nutrition?.fatG || raw?.Total_lipid || 14),
+      fatG: Number(raw?.nutrition?.fatG || raw?.Total_lipid || 12),
+      fiberG: Number(raw?.nutrition?.fiberG || raw?.Fiber || 6),
     },
     ingredients,
     instructions: Array.isArray(raw?.instructions)
       ? raw.instructions.map(String)
       : ["Prepare and chop ingredients.", "Cook over medium heat and season to taste."],
-    image: String(raw?.image || ""),
+    image: String(raw?.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80"),
     sourceUrl: String(raw?.sourceUrl || "https://cosylab.iiitd.edu.in/recipedb/"),
     adaptations: Array.isArray(raw?.adaptations) ? raw.adaptations : [],
   };

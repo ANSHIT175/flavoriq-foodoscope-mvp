@@ -23,7 +23,12 @@ export async function POST(req: NextRequest) {
       taste: body.taste || "Any",
       maxCookingTime: body.maxCookingTime || "Any",
       dietaryPreference: body.dietaryPreference || "No preference",
-      allowAdditionalIngredients: Boolean(body.allowAdditionalIngredients),
+      calorieRange: body.calorieRange || "Any",
+      proteinLevel: body.proteinLevel || "Any",
+      allowAdditionalIngredients:
+        typeof body.allowAdditionalIngredients === "boolean"
+          ? body.allowAdditionalIngredients
+          : true,
     };
 
     const { recipes, modeUsed } = await fetchCandidateRecipes(context);
@@ -36,7 +41,7 @@ export async function POST(req: NextRequest) {
           ? "Calculated Recommendation Score"
           : "Illustrative Match Score (Calculated via MVP Engine on Dev Dataset)",
       context,
-      results: ranked.slice(0, 5),
+      results: ranked,
       totalCandidatesEvaluated: recipes.length,
     });
   } catch (err: any) {

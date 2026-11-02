@@ -8,8 +8,6 @@ import { getFlavorCompatibility } from "../foodoscope/flavorDb";
 
 /**
  * Configurable MVP Recommendation Weights (Total = 100 points)
- * Note: These weights represent the transparent MVP recommendation logic
- * and are not claimed to be clinically or scientifically validated.
  */
 export const SCORING_WEIGHTS = {
   ingredientCoverage: 30,
@@ -72,6 +70,29 @@ export function parseMaxTimeMinutes(option: UserCookingContext["maxCookingTime"]
   }
 }
 
+export function matchesCalorieRange(
+  calories: number,
+  range?: UserCookingContext["calorieRange"]
+): boolean {
+  if (!range || range === "Any") return true;
+  if (range === "Under 300") return calories < 300;
+  if (range === "300–500") return calories >= 300 && calories <= 500;
+  if (range === "500–700") return calories > 500 && calories <= 700;
+  if (range === "700+") return calories > 700;
+  return true;
+}
+
+export function matchesProteinLevel(
+  proteinG: number,
+  level?: UserCookingContext["proteinLevel"]
+): boolean {
+  if (!level || level === "Any") return true;
+  if (level === "Low") return proteinG < 12;
+  if (level === "Medium") return proteinG >= 12 && proteinG < 17;
+  if (level === "High") return proteinG >= 17;
+  return true;
+}
+
 export async function scoreAndRankRecipes(
   candidates: NormalizedRecipe[],
   context: UserCookingContext
@@ -110,7 +131,7 @@ export async function scoreAndRankRecipes(
       userCanonical.length > 0 ? userUsedCount / userCanonical.length : 0;
     const rawIngScore =
       (coreRatio * 0.75 + userUtilizationRatio * 0.25) * SCORING_WEIGHTS.ingredientCoverage;
-    const ingredientCoverage = Math.round(rawIngScore);
+    const ingredientCoverage: number = Math.round(rawIngScore);
 
     // 2. Flavor Compatibility (0 - 25) via FlavorDB
     const activeRecipeIngredients = [
@@ -121,7 +142,7 @@ export async function scoreAndRankRecipes(
       activeRecipeIngredients,
       SCORING_WEIGHTS.flavorCompatibility
     );
-    const flavorCompatibility = flavorResult.score;
+    const flavorCompatibility: number = flavorResult.score;
 
     // 3. Cuisine Fit (0 - 15)
     let cuisineFit: number = 0;
@@ -162,7 +183,7 @@ export async function scoreAndRankRecipes(
       }
     }
 
-    const totalScore = Math.min(
+    const totalScore: number = Math.min(
       100,
       Math.max(
         0,
@@ -232,6 +253,12 @@ export async function scoreAndRankRecipes(
         context.dietaryPreference !== "No preference" &&
         !r.recipe.dietaryTags.includes(context.dietaryPreference)
       ) {
+        return false;
+      }
+      if (!matchesCalorieRange(r.recipe.nutrition.calories, context.calorieRange)) {
+        return false;
+      }
+      if (!matchesProteinLevel(r.recipe.nutrition.proteinG, context.proteinLevel)) {
         return false;
       }
       if (!context.allowAdditionalIngredients && r.ingredientMatch.matchedCoreIngredients.length === 0) {
