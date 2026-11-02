@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UserCookingContext } from "@/lib/foodoscope/types";
-import { fetchCandidateRecipes } from "@/lib/foodoscope/recipeDb";
-import { scoreAndRankRecipes } from "@/lib/recommendation/scoring";
+import { UserCookingContext } from "../../../lib/foodoscope/types";
+import { fetchCandidateRecipes } from "../../../lib/foodoscope/recipeDb";
+import { scoreAndRankRecipes } from "../../../lib/recommendation/scoring";
 
 export async function POST(req: NextRequest) {
   try {

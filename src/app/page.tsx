@@ -20,8 +20,8 @@ import type {
   DietaryOption,
   TasteOption,
   UserCookingContext,
-} from "@/lib/foodoscope/types";
-import type { RankedRecipeResult } from "@/lib/recommendation/scoring";
+} from "../lib/foodoscope/types";
+import type { RankedRecipeResult } from "../lib/recommendation/scoring";
 
 interface RecommendApiResponse {
   mode: "live" | "mock";
