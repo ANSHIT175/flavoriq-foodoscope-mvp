@@ -1,4 +1,10 @@
-import { NormalizedRecipe, RecipeIngredient } from "./types";
+import {
+  CuisineOption,
+  DietaryOption,
+  NormalizedRecipe,
+  RecipeIngredient,
+  TasteOption,
+} from "./types";
 
 export const INGREDIENT_SYNONYM_GROUPS: Record<string, string[]> = {
   dal: [
@@ -58,4 +64,97 @@ export function isIngredientMatch(userRawOrCanon: string, recipeIng: RecipeIngre
   const rNameLower = recipeIng.name.toLowerCase();
   const uRawLower = userRawOrCanon.trim().toLowerCase();
   return rNameLower.includes(uRawLower) || rNameLower.includes(uCanon);
+}
+
+const VALID_CUISINES: Exclude<CuisineOption, "Any">[] = [
+  "Indian",
+  "Italian",
+  "Mexican",
+  "Chinese",
+  "Continental",
+];
+
+const VALID_TASTES: Exclude<TasteOption, "Any">[] = [
+  "Spicy",
+  "Mild",
+  "Sweet",
+  "Savory",
+  "Tangy",
+];
+
+const VALID_DIETARY: Exclude<DietaryOption, "No preference">[] = [
+  "Vegetarian",
+  "Vegan",
+  "Low-oil",
+  "Gluten-free",
+];
+
+/**
+ * Normalizes raw RecipeDB API records into FLAVORIQ's internal NormalizedRecipe schema.
+ */
+export function mapRawRecipeDbRecord(
+  raw: Record<string, any>,
+  index: number = 0
+): NormalizedRecipe {
+  const rawCuisine = String(raw?.cuisine || raw?.region || "Indian");
+  const matchedCuisine =
+    VALID_CUISINES.find((c) => rawCuisine.toLowerCase().includes(c.toLowerCase())) ||
+    "Indian";
+
+  const rawTastes: string[] = Array.isArray(raw?.tasteProfile)
+    ? raw.tasteProfile
+    : ["Savory"];
+  const tasteProfile = rawTastes
+    .map((t) => VALID_TASTES.find((vt) => vt.toLowerCase() === String(t).toLowerCase()))
+    .filter((t): t is Exclude<TasteOption, "Any"> => Boolean(t));
+
+  const rawDietary: string[] = Array.isArray(raw?.dietaryTags)
+    ? raw.dietaryTags
+    : ["Vegetarian"];
+  const dietaryTags = rawDietary
+    .map((d) => VALID_DIETARY.find((vd) => vd.toLowerCase() === String(d).toLowerCase()))
+    .filter((d): d is Exclude<DietaryOption, "No preference"> => Boolean(d));
+
+  const rawIngredients: any[] = Array.isArray(raw?.ingredients) ? raw.ingredients : [];
+  const ingredients: RecipeIngredient[] = rawIngredients.map((ing: any, idx: number) => {
+    const name = typeof ing === "string" ? ing : String(ing?.name || ing?.ingredient || `Ingredient ${idx + 1}`);
+    const canonicalName = normalizeIngredientName(ing?.canonicalName || name);
+    return {
+      name,
+      canonicalName,
+      quantity: String(ing?.quantity || ing?.phrase || "as needed"),
+      category: String(ing?.category || "Produce & Pantry"),
+      isCore: typeof ing?.isCore === "boolean" ? ing.isCore : idx < 4,
+    };
+  });
+
+  return {
+    id: String(raw?.id || raw?.recipe_id || `rec-${index + 1}`),
+    recipeDbId: String(raw?.recipeDbId || raw?.recipe_id || `RDB-${1000 + index}`),
+    name: String(raw?.name || raw?.Recipe_title || "Seasonal Dish"),
+    cuisine: matchedCuisine,
+    region: String(raw?.region || raw?.Sub_region || matchedCuisine),
+    tasteProfile: tasteProfile.length > 0 ? tasteProfile : ["Savory"],
+    cookingTimeMinutes: Number(raw?.cookingTimeMinutes || raw?.total_time || 30),
+    dietaryTags: dietaryTags.length > 0 ? dietaryTags : ["Vegetarian"],
+    processes: Array.isArray(raw?.processes)
+      ? raw.processes.map(String)
+      : ["saute", "simmer"],
+    utensils: Array.isArray(raw?.utensils)
+      ? raw.utensils.map(String)
+      : ["pan", "spatula"],
+    nutrition: {
+      calories: Number(raw?.nutrition?.calories || raw?.Calories || 320),
+      proteinG: Number(raw?.nutrition?.proteinG || raw?.Protein || 12),
+      carbsG: Number(raw?.nutrition?.carbsG || raw?.Carbohydrate || 34),
+      fatG: Number(raw?.nutrition?.fatG || raw?.Total_lipid || 14),
+    },
+    ingredients,
+    instructions: Array.isArray(raw?.instructions)
+      ? raw.instructions.map(String)
+      : ["Prepare and chop ingredients.", "Cook over medium heat and season to taste."],
+    image: String(raw?.image || ""),
+    sourceUrl: String(raw?.sourceUrl || "https://cosylab.iiitd.edu.in/recipedb/"),
+    adaptations: Array.isArray(raw?.adaptations) ? raw.adaptations : [],
+  };
 }

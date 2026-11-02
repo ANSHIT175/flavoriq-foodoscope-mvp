@@ -11,8 +11,9 @@ export async function fetchCandidateRecipes(
   context: UserCookingContext,
   modeOverride?: ApiMode
 ): Promise<{ recipes: NormalizedRecipe[]; modeUsed: ApiMode }> {
+  const envMode = String(process.env.API_MODE || "mock").trim().toLowerCase();
   const mode: ApiMode =
-    modeOverride || ((process.env.API_MODE as ApiMode) === "live" ? "live" : "mock");
+    modeOverride || (envMode === "live" ? "live" : "mock");
 
   if (mode === "live") {
     const apiKey = process.env.FOODOSCOPE_API_KEY;
@@ -21,7 +22,7 @@ export async function fetchCandidateRecipes(
 
     if (!apiKey) {
       throw new Error(
-        "FOODOSCOPE_API_KEY is missing in server environment (.env.local). Switch API_MODE=mock for local development or add your Foodoscope token."
+        "FOODOSCOPE_API_KEY is missing in server environment (.env.local). Switch API_MODE=MOCK for local/Vercel demo mode or add your Foodoscope token."
       );
     }
 
@@ -55,7 +56,7 @@ export async function fetchCandidateRecipes(
     };
   }
 
-  // MOCK MODE (Clearly labeled development dataset)
+  // MOCK MODE (Clearly labeled development dataset — works with API_MODE=MOCK or API_MODE=mock)
   return {
     recipes: DEVELOPMENT_RECIPES,
     modeUsed: "mock",

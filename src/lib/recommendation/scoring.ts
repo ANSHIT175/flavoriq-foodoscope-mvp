@@ -31,7 +31,7 @@ export interface ScoreBreakdown {
   totalScore: number; // 0 - 100
 }
 
-export interfaceIngredientMatchSummary {
+export interface IngredientMatchSummary {
   matchedCoreIngredients: string[];
   missingCoreIngredients: string[];
   matchedSecondaryIngredients: string[];
@@ -46,7 +46,7 @@ export interfaceIngredientMatchSummary {
 export interface RankedRecipeResult {
   recipe: NormalizedRecipe;
   scoreBreakdown: ScoreBreakdown;
-  ingredientMatch: interfaceIngredientMatchSummary;
+  ingredientMatch: IngredientMatchSummary;
   flavorCompatibility: FlavorCompatibilityResult;
   explanations: {
     ingredientFitText: string;
@@ -175,9 +175,6 @@ export async function scoreAndRankRecipes(
       )
     );
 
-    const denom = Math.max(coreIngredients.length, userCanonical.length, 1);
-    const num = Math.min(matchedCore.length, denom);
-
     results.push({
       recipe,
       scoreBreakdown: {
@@ -211,7 +208,7 @@ export async function scoreAndRankRecipes(
         preferenceFitText: `Matches your selected ${
           context.cuisine === "Any" ? recipe.cuisine : context.cuisine
         } cuisine and ${
-          context.taste === "Any" ? recipe.tasteProfile[0].toLowerCase() : context.taste.toLowerCase()
+          context.taste === "Any" ? (recipe.tasteProfile[0]?.toLowerCase() || "savory") : context.taste.toLowerCase()
         } taste preference.`,
         timeFitText:
           maxMinutes !== null
